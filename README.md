@@ -37,7 +37,8 @@ Start the application in dev mode (registers the dev-profile workflows):
   -Dquarkus.log.category.\"io.littlehorse.connector\".level=DEBUG \
   -Dlhc.api.host=localhost \
   -Dlhc.api.port=2023 \
-  -Dquarkus.http.port=9091
+  -Dquarkus.http.port=9091 \
+  -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
 ```
 
 ## Trying the workflows
