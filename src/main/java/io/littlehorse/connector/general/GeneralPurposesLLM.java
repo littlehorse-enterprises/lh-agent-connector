@@ -1,4 +1,4 @@
-package io.littlehorse.connector.llm;
+package io.littlehorse.connector.general;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
@@ -7,7 +7,8 @@ import jakarta.enterprise.context.ApplicationScoped;
 
 @RegisterAiService
 @ApplicationScoped
-public interface LlmAssistant {
+/* CAUTION: this agent has memory, so it will remember previous interactions */
+public interface GeneralPurposesLLM {
 
     @SystemMessage("You are a helpful assistant. Answer concisely and accurately.")
     @UserMessage("{prompt}")
