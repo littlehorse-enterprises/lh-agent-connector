@@ -2,8 +2,10 @@ package io.littlehorse.connector.general;
 
 import dev.langchain4j.exception.NonRetriableException;
 import io.littlehorse.quarkus.task.LHTask;
+import io.littlehorse.sdk.common.LHLibUtil;
 import io.littlehorse.sdk.common.exception.LHTaskException;
 import io.littlehorse.sdk.worker.LHTaskMethod;
+import io.littlehorse.sdk.worker.WorkerContext;
 import jakarta.inject.Inject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,10 +23,12 @@ public class GeneralPurposesTask {
     }
 
     @LHTaskMethod(value = "ask-llm", description = "Sends a prompt to the LLM and returns its response.")
-    public String askLlm(String prompt) {
-        LOG.info("Received prompt for LLM: {}", prompt);
+    public String askLlm(String prompt, WorkerContext context) {
+        // Use the WfRunId as the memory id so each WfRun keeps its own conversation context.
+        String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
+        LOG.info("Received prompt for LLM (wfRunId={}): {}", memoryId, prompt);
         try {
-            return assistant.answer(prompt);
+            return assistant.answer(memoryId, prompt);
         } catch (NonRetriableException e) {
             // Permanent failures (auth/empty credits, misconfiguration, invalid request): do not
             // retry. Throwing LHTaskException raises a business EXCEPTION instead of a retryable

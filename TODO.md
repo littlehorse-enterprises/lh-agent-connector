@@ -2,7 +2,7 @@
 
 ## LLM agents
 
-- [ ] Manage memory / session id for `GeneralPurposesLLM`. Use `@MemoryId` on the method (e.g. the
+- [x] Manage memory / session id for `GeneralPurposesLLM`. Use `@MemoryId` on the method (e.g. the
       `WfRunId`) so each conversation has its own isolated context instead of sharing a single
       in-memory window.
 - [ ] When running in Docker, persist/back up chat sessions (e.g. a `ChatMemoryStore` backed by
