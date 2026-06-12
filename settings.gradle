@@ -1,0 +1,12 @@
+pluginManagement {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+        mavenLocal()
+    }
+    plugins {
+        id "io.quarkus" version "${quarkusVersion}"
+        id "com.diffplug.spotless" version "${spotlessVersion}"
+    }
+}
+rootProject.name='lh-agent-connector'

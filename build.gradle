@@ -1,0 +1,94 @@
+plugins {
+    id "java"
+    id "io.quarkus"
+    id "com.diffplug.spotless"
+    id "checkstyle"
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "Central Portal Snapshots"
+        url = "https://central.sonatype.com/repository/maven-snapshots/"
+    }
+    mavenLocal()
+}
+
+
+configurations.all {
+    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
+}
+
+dependencies {
+    // quarkus
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
+    implementation "io.quarkus:quarkus-arc"
+    implementation "io.quarkus:quarkus-smallrye-health"
+    implementation "io.quarkus:quarkus-logging-json"
+
+    // langchain4j (OpenAI)
+    implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
+
+    // littlehorse
+    implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }
+
+    // logs
+    implementation "org.jboss.slf4j:slf4j-jboss-logmanager"
+
+    // tests
+    testImplementation "io.quarkus:quarkus-junit5"
+    testImplementation "io.rest-assured:rest-assured"
+    testImplementation "org.mockito:mockito-core"
+    testImplementation "org.mockito:mockito-junit-jupiter"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+test {
+    testLogging {
+        events "passed", "skipped", "failed"
+        exceptionFormat = "full"
+    }
+    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
+    jvmArgs "--add-opens", "java.base/java.lang=ALL-UNNAMED"
+}
+
+compileJava {
+    options.encoding = "UTF-8"
+    options.compilerArgs << "-parameters"
+}
+
+compileTestJava {
+    options.encoding = "UTF-8"
+}
+
+spotless {
+    java {
+        removeUnusedImports()
+        palantirJavaFormat().style("AOSP")
+    }
+}
+
+checkstyle {
+    configFile = file("${rootDir}/checkstyle.xml")
+    checkstyleTest.enabled = false
+    checkstyleIntegrationTest.enabled = false
+}
+
+tasks.register("dockerComposeUp", Exec) {
+    description = "Starts docker-compose with versions from gradle.properties"
+    commandLine "docker", "compose", "up", "-d"
+    environment "LH_VERSION", version
+    environment "KAFKA_VERSION", kafkaVersion
+}
+
+tasks.register("dockerComposeDown", Exec) {
+    description = "Stops docker-compose"
+    commandLine "docker", "compose", "down"
+    environment "LH_VERSION", version
+    environment "KAFKA_VERSION", kafkaVersion
+}
