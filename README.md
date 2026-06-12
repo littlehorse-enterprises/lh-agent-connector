@@ -22,11 +22,6 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
 
 - JDK 25
 - A running LittleHorse server (defaults to `localhost:2023`)
-- An OpenAI API key, exposed as the `OPENAI_API_KEY` environment variable:
-
-  ```bash
-  export OPENAI_API_KEY=sk-...
-  ```
 
 ## Running
 
