@@ -27,7 +27,7 @@ public class GeneralPurposesWorkflow implements LHWorkflowDefinition {
         final WfRunVariable answer = wf.declareStr("answer");
         answer.assign(responsePrompt);
 
-        final NodeOutput responseTopic = wf.execute("ask-llm", "What are we talking about in this session?");
+        final NodeOutput responseTopic = wf.execute("print-topic");
         final WfRunVariable topic = wf.declareStr("topic");
         topic.assign(responseTopic);
     }

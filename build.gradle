@@ -31,6 +31,9 @@ dependencies {
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-ollama"
 
+    // redis (persistent chat memory store)
+    implementation "io.quarkus:quarkus-redis-client"
+
     // littlehorse
     implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }
 
@@ -85,6 +88,7 @@ tasks.register("dockerComposeUp", Exec) {
     commandLine "docker", "compose", "up", "-d"
     environment "LH_VERSION", version
     environment "KAFKA_VERSION", kafkaVersion
+    environment "REDIS_VERSION", redisVersion
 }
 
 tasks.register("dockerComposeDown", Exec) {
@@ -92,4 +96,5 @@ tasks.register("dockerComposeDown", Exec) {
     commandLine "docker", "compose", "down", "-v"
     environment "LH_VERSION", version
     environment "KAFKA_VERSION", kafkaVersion
+    environment "REDIS_VERSION", redisVersion
 }

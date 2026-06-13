@@ -44,4 +44,20 @@ public class GeneralPurposesTask {
         // RetriableException (timeouts, rate limits, server errors) and any other RuntimeException
         // propagate as a retryable TASK_FAILURE so LittleHorse retries the task.
     }
+
+    @LHTaskMethod(
+            value = "print-topic",
+            description = "Asks the LLM what the current session is about and prints it.")
+    public String printTopic(final WorkerContext context) {
+        // Use the WfRunId as the memory id so the question is answered within this WfRun's context.
+        final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
+        try {
+            final String topic = assistant.answer(memoryId, "What are we talking about in this session?");
+            LOG.info("Current topic (wfRunId={}): {}", memoryId, topic);
+            return topic;
+        } catch (final NonRetriableException e) {
+            LOG.error("Non-retriable LLM error while resolving the session topic", e);
+            throw new LHTaskException("llm-non-retriable", e.getMessage());
+        }
+    }
 }

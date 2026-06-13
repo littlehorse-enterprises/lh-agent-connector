@@ -39,7 +39,7 @@ public class EmailAgentWorkflow implements LHWorkflowDefinition {
         final WfRunVariable email = wf.declareStr("email").required();
 
         final NodeOutput classification = wf.execute("read-email", email);
-        final WfRunVariable result = wf.declareJsonObj("classification").asPublic();
+        final WfRunVariable result = wf.declareJsonObj("classification");
         result.assign(classification);
 
         final WfRunVariable type = wf.declareStr("type");

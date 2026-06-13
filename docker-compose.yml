@@ -57,6 +57,20 @@ services:
     volumes:
       - lh_data:/var/lib/lh/data
 
+  redis:
+    image: redis:${REDIS_VERSION}
+    restart: on-failure
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: redis-cli ping | grep -q PONG
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - redis_data:/data
+
   dashboard:
     image: ghcr.io/littlehorse-enterprises/littlehorse/lh-dashboard:${LH_VERSION}
     restart: on-failure
@@ -79,6 +93,7 @@ services:
 volumes:
   kafka_data:
   lh_data:
+  redis_data:
 
 networks:
   default:
