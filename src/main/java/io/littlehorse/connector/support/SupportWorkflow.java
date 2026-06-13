@@ -39,7 +39,7 @@ public class SupportWorkflow implements LHWorkflowDefinition {
         final WfRunVariable summary = wf.declareStr("summary");
         final WfRunVariable resolutionForm = wf.declareJsonObj("resolution-form");
         final WfRunVariable resolution = wf.declareStr("resolution");
-        final WfRunVariable reply = wf.declareStr("reply").asPublic();
+        final WfRunVariable reply = wf.declareStr("reply");
 
         final NodeOutput classification = wf.execute("classify-support-ticket", ticket);
         result.assign(classification);

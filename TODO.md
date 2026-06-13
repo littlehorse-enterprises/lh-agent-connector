@@ -8,9 +8,9 @@
 - [x] When running in Docker, persist/back up chat sessions (e.g. a `ChatMemoryStore` backed by
       Redis/Infinispan/DB) so memory survives container restarts. Implemented
       `RedisChatMemoryStore` backed by the `quarkus-redis-client`.
-- [ ] Make the `@SystemMessage` configurable (e.g. `SystemMessageProvider` or a config property) so
-      the persona/instructions can be changed without recompiling. Applies to both
-      `GeneralPurposesLLM` and `EmailReaderLLM` (classification rules).
+- [x] Make the `@SystemMessage` configurable (e.g. `SystemMessageProvider` or a config property) so
+      the persona/instructions can be changed without recompiling. Done for `GeneralPurposesLLM` via
+      the `lhc.general.system-message` property (templated `@SystemMessage` bound with `@V`).
 
 ## Features
 

@@ -10,6 +10,7 @@ import io.littlehorse.sdk.worker.WorkerContext;
 
 import jakarta.inject.Inject;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,10 +20,14 @@ public class GeneralPurposesTask {
     private static final Logger LOG = LoggerFactory.getLogger(GeneralPurposesTask.class);
 
     private final GeneralPurposesLLM assistant;
+    private final String systemMessage;
 
     @Inject
-    public GeneralPurposesTask(final GeneralPurposesLLM assistant) {
+    public GeneralPurposesTask(
+            final GeneralPurposesLLM assistant,
+            @ConfigProperty(name = "lhc.general.system-message") final String systemMessage) {
         this.assistant = assistant;
+        this.systemMessage = systemMessage;
     }
 
     @LHTaskMethod(
@@ -33,7 +38,7 @@ public class GeneralPurposesTask {
         final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         LOG.info("Received prompt for LLM (wfRunId={}): {}", memoryId, prompt);
         try {
-            return assistant.answer(memoryId, prompt);
+            return assistant.answer(memoryId, systemMessage, prompt);
         } catch (final NonRetriableException e) {
             // Permanent failures (auth/empty credits, misconfiguration, invalid request): do not
             // retry. Throwing LHTaskException raises a business EXCEPTION instead of a retryable
@@ -52,7 +57,8 @@ public class GeneralPurposesTask {
         // Use the WfRunId as the memory id so the question is answered within this WfRun's context.
         final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         try {
-            final String topic = assistant.answer(memoryId, "What are we talking about in this session?");
+            final String topic =
+                    assistant.answer(memoryId, systemMessage, "What are we talking about in this session?");
             LOG.info("Current topic (wfRunId={}): {}", memoryId, topic);
             return topic;
         } catch (final NonRetriableException e) {

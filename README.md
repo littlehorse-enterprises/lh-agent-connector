@@ -10,8 +10,13 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
 ## What's inside
 
 - **`general` package** — a general purpose assistant.
-  - `ask-llm` task: forwards a prompt to the LLM and returns its response.
-  - `ask-llm-workflow` (dev only): runs `ask-llm` and exposes the answer.
+  - `ask-llm` task: forwards a prompt to the LLM and returns its response. The assistant keeps a
+    per-`WfRun` conversation memory (keyed by `WfRunId`) and its persona is configurable via the
+    `lhc.general.system-message` property (no recompile needed).
+  - `print-topic` task: asks the LLM what the current session is about and returns the summary,
+    demonstrating the shared per-`WfRun` memory.
+  - `ask-llm-workflow` (dev only): runs `ask-llm`, then `print-topic`, exposing both the answer and
+    the inferred topic.
 - **`email` package** — an email classifier.
   - `read-email` task: classifies an email as `SPAM`, `JOB_OPPORTUNITY` or `NOT_IMPORTANT`
     (the email assistant has no memory).
@@ -29,10 +34,15 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
     needs more info or approval it pauses on a `UserTask`; the human's answer is fed back and the
     conversation continues until the task is done.
 
+Conversation memory for the stateful agents (`general`, `filesystem`) is persisted in Redis via a
+custom `RedisChatMemoryStore`, so chat history survives application/container restarts.
+
 ## Prerequisites
 
 - JDK 25
 - A running LittleHorse server (defaults to `localhost:2023`)
+- A running Redis instance for persistent chat memory (defaults to `localhost:6379`, set via
+  `quarkus.redis.hosts`).
 - Optionally [Ollama](https://ollama.com/): if it is installed and running locally, Quarkus uses
   that instance instead of starting an Ollama dev service automatically.
 - Node.js (only for the `filesystem` package): its MCP server is launched with `npx`. The agent's
@@ -49,9 +59,16 @@ with the `quarkus.langchain4j.chat-model.provider` property (defaults to `openai
 - `ollama` — requires a running [Ollama](https://ollama.com/) server; model set via
   `quarkus.langchain4j.ollama.chat-model.model-name`.
 
-## Running
+## Infrastructure
 
-Start the application in dev mode (registers the dev-profile workflows).
+The LittleHorse server, Kafka and Redis can be started locally with the bundled Compose file via
+Gradle (versions are taken from `gradle.properties`):
+
+```bash
+./gradlew dockerComposeUp    # start LittleHorse, Kafka and Redis
+./gradlew dockerComposeDown  # stop them and remove volumes
+```
+
 
 Using OpenAI (default):
 
