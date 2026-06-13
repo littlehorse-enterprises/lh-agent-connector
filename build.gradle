@@ -30,6 +30,7 @@ dependencies {
     implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-ollama"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-mcp"
 
     // redis (persistent chat memory store)
     implementation "io.quarkus:quarkus-redis-client"

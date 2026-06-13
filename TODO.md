@@ -18,4 +18,6 @@
       agent flow (e.g. review/approve LLM output). Implemented the `support` package: an LLM triages
       a ticket as FEEDBACK or SUPPORT_REQUEST; support requests pause on a `UserTask` for a human
       agent, whose resolution is fed back to the LLM to draft the customer reply.
-- [ ] Add MCP servers to expose tools to the agents via the Model Context Protocol.
+- [x] Add MCP servers to expose tools to the agents via the Model Context Protocol. Added the
+      `filesystem` package: a conversational agent with filesystem MCP tools that loops through
+      `UserTask`s, asking the human for more info or approval before continuing a task.
