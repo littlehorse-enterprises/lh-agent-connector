@@ -86,11 +86,16 @@ Using Ollama:
 
 With the application running and `lhctl` pointed at the same LittleHorse server:
 
-```bash
-# General purpose assistant
-lhctl run ask-llm-workflow prompt "List all star wars movies"
+### General purpose assistant (`ask-llm-workflow`)
 
-# Email classifier — job opportunity (triggers a Slack notification)
+```bash
+lhctl run ask-llm-workflow prompt "List all star wars movies"
+```
+
+### Email classifier (`email-workflow`)
+
+```bash
+# Job opportunity (triggers a Slack notification)
 lhctl run email-workflow email "
 Subject: Software Engineer position at Acme Corp
 
@@ -99,7 +104,7 @@ Engineer role at Acme Corp. The position is remote and the salary range is
 competitive. Are you available for a quick call this week?
 "
 
-# Email classifier — spam
+# Spam
 lhctl run email-workflow email "
 Subject: You WON a FREE iPhone.
 
@@ -111,11 +116,13 @@ free prize now before it expires. Limited time only.
 > The `email-workflow` job-opportunity branch calls the `saddle-bag-slack-post-message`
 > task, which must be served by another worker for the Slack notification to be delivered. See [lh-saddle-bags](https://github.com/littlehorse-enterprises/lh-saddle-bags).
 
+### Human-in-the-loop support agent (`support-workflow`)
+
 ```bash
-# Support agent — plain feedback (just logged)
+# Plain feedback (just logged)
 lhctl run support-workflow ticket "Just wanted to say your new dashboard looks great, keep it up."
 
-# Support agent — actionable request (pauses on a UserTask for a human agent)
+# Actionable request (pauses on a UserTask for a human agent)
 lhctl run support-workflow ticket "I was charged twice for my subscription this month, please help."
 ```
 
@@ -123,11 +130,13 @@ lhctl run support-workflow ticket "I was charged twice for my subscription this 
 > Complete it (e.g. from the LittleHorse dashboard) to resume the workflow; the LLM then drafts the
 > customer reply from the human agent's resolution notes.
 
+### Conversational filesystem agent (`filesystem-workflow`)
+
 ```bash
-# Filesystem agent — needs approval before a destructive action
+# Needs approval before a destructive action
 lhctl run filesystem-workflow task "Delete every .log file in the workspace directory."
 
-# Filesystem agent — needs more info to continue
+# Needs more info to continue
 lhctl run filesystem-workflow task "Create a notes.txt file, but ask me what to write in it."
 ```
 
