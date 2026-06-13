@@ -13,11 +13,11 @@ import io.quarkus.arc.profile.IfBuildProfile;
  * <p>Run it with lhctl, e.g.:
  *
  * <pre>
- * lhctl run agent-workflow prompt "List all star wars movies"
+ * lhctl run ask-llm-workflow prompt "List all star wars movies"
  * </pre>
  */
 @IfBuildProfile("dev")
-@LHWorkflow("agent-workflow")
+@LHWorkflow("ask-llm-workflow")
 public class GeneralPurposesWorkflow implements LHWorkflowDefinition {
 
     @Override

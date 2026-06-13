@@ -14,6 +14,8 @@
 
 ## Features
 
-- [ ] Integrate interactions with user tasks (LH `UserTask`s) so a human can be involved in the
-      agent flow (e.g. review/approve LLM output).
+- [x] Integrate interactions with user tasks (LH `UserTask`s) so a human can be involved in the
+      agent flow (e.g. review/approve LLM output). Implemented the `support` package: an LLM triages
+      a ticket as FEEDBACK or SUPPORT_REQUEST; support requests pause on a `UserTask` for a human
+      agent, whose resolution is fed back to the LLM to draft the customer reply.
 - [ ] Add MCP servers to expose tools to the agents via the Model Context Protocol.

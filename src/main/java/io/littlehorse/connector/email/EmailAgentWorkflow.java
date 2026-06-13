@@ -14,7 +14,7 @@ import io.quarkus.arc.profile.IfBuildProfile;
  * <p>Run it with lhctl, e.g.:
  *
  * <pre>
- * lhctl run email-agent-workflow email "
+ * lhctl run email-workflow email "
  * Subject: Software Engineer position at Acme Corp
  *
  * Hi, we came across your profile and would love to talk about a Senior Backend
@@ -22,7 +22,7 @@ import io.quarkus.arc.profile.IfBuildProfile;
  * competitive. Are you available for a quick call this week?
  * "
  *
- * lhctl run email-agent-workflow email "
+ * lhctl run email-workflow email "
  * Subject: You WON a FREE iPhone.
  *
  * Congratulations. Click this link http://totally-legit.example to claim your
@@ -31,7 +31,7 @@ import io.quarkus.arc.profile.IfBuildProfile;
  * </pre>
  */
 @IfBuildProfile("dev")
-@LHWorkflow("email-agent-workflow")
+@LHWorkflow("email-workflow")
 public class EmailAgentWorkflow implements LHWorkflowDefinition {
 
     @Override
