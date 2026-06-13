@@ -40,23 +40,13 @@ Start the application in dev mode (registers the dev-profile workflows).
 Using OpenAI (default):
 
 ```bash
-./gradlew quarkusDev \
-  -Dquarkus.log.category.\"io.littlehorse.connector\".level=DEBUG \
-  -Dlhc.api.host=localhost \
-  -Dlhc.api.port=2023 \
-  -Dquarkus.http.port=9091 \
-  -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
+./gradlew quarkusDev -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
 ```
 
 Using Ollama:
 
 ```bash
-./gradlew quarkusDev \
-  -Dquarkus.log.category.\"io.littlehorse.connector\".level=DEBUG \
-  -Dlhc.api.host=localhost \
-  -Dlhc.api.port=2023 \
-  -Dquarkus.http.port=9091 \
-  -Dquarkus.langchain4j.chat-model.provider=ollama
+./gradlew quarkusDev -Dquarkus.langchain4j.chat-model.provider=ollama
 ```
 
 ## Trying the workflows
