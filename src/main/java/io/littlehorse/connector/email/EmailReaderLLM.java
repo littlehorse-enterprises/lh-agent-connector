@@ -2,16 +2,18 @@ package io.littlehorse.connector.email;
 
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+
 import io.quarkiverse.langchain4j.RegisterAiService;
+
 import jakarta.enterprise.context.ApplicationScoped;
 
 /** Stateless (no memory) AI service that classifies the content of an email. */
-@RegisterAiService(chatMemoryProviderSupplier = RegisterAiService.NoChatMemoryProviderSupplier.class)
+@RegisterAiService(
+        chatMemoryProviderSupplier = RegisterAiService.NoChatMemoryProviderSupplier.class)
 @ApplicationScoped
 public interface EmailReaderLLM {
 
-    @SystemMessage(
-            """
+    @SystemMessage("""
             You are an email classifier. Read the email and classify it into exactly one type,
             returning a JSON object with two fields: `type` and `subject`.
 

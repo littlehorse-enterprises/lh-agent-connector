@@ -1,10 +1,13 @@
 package io.littlehorse.connector.email;
 
 import dev.langchain4j.exception.NonRetriableException;
+
 import io.littlehorse.quarkus.task.LHTask;
 import io.littlehorse.sdk.common.exception.LHTaskException;
 import io.littlehorse.sdk.worker.LHTaskMethod;
+
 import jakarta.inject.Inject;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,7 +23,9 @@ public class EmailReaderTask {
         this.emailReader = emailReader;
     }
 
-    @LHTaskMethod(value = "read-email", description = "Classifies an email as SPAM, JOB_OPPORTUNITY or NOT_IMPORTANT.")
+    @LHTaskMethod(
+            value = "read-email",
+            description = "Classifies an email as SPAM, JOB_OPPORTUNITY or NOT_IMPORTANT.")
     public EmailClassification readEmail(final String email) {
         LOG.info("Classifying email of length {}", email == null ? 0 : email.length());
         try {
