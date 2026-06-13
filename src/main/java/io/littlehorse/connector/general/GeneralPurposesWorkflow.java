@@ -23,8 +23,12 @@ public class GeneralPurposesWorkflow implements LHWorkflowDefinition {
     @Override
     public void define(final WorkflowThread wf) {
         final WfRunVariable prompt = wf.declareStr("prompt").required();
-        final NodeOutput response = wf.execute("ask-llm", prompt);
-        final WfRunVariable answer = wf.declareStr("answer").asPublic();
-        answer.assign(response);
+        final NodeOutput responsePrompt = wf.execute("ask-llm", prompt);
+        final WfRunVariable answer = wf.declareStr("answer");
+        answer.assign(responsePrompt);
+
+        final NodeOutput responseTopic = wf.execute("ask-llm", "What are we talking about in this session?");
+        final WfRunVariable topic = wf.declareStr("topic");
+        topic.assign(responseTopic);
     }
 }
