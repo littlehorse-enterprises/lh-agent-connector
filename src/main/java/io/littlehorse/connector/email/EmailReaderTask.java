@@ -16,18 +16,18 @@ public class EmailReaderTask {
     private final EmailReaderLLM emailReader;
 
     @Inject
-    public EmailReaderTask(EmailReaderLLM emailReader) {
+    public EmailReaderTask(final EmailReaderLLM emailReader) {
         this.emailReader = emailReader;
     }
 
     @LHTaskMethod(value = "read-email", description = "Classifies an email as SPAM, JOB_OPPORTUNITY or NOT_IMPORTANT.")
-    public EmailClassification readEmail(String email) {
+    public EmailClassification readEmail(final String email) {
         LOG.info("Classifying email of length {}", email == null ? 0 : email.length());
         try {
-            EmailClassification classification = emailReader.classify(email);
+            final EmailClassification classification = emailReader.classify(email);
             LOG.info("Email classified as {}", classification.type());
             return classification;
-        } catch (NonRetriableException e) {
+        } catch (final NonRetriableException e) {
             // Permanent failures (auth/empty credits, misconfiguration, invalid request): do not
             // retry. Throwing LHTaskException raises a business EXCEPTION instead of a retryable
             // TASK_FAILURE.

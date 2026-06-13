@@ -21,10 +21,10 @@ import io.quarkus.arc.profile.IfBuildProfile;
 public class GeneralPurposesWorkflow implements LHWorkflowDefinition {
 
     @Override
-    public void define(WorkflowThread wf) {
-        WfRunVariable prompt = wf.declareStr("prompt").required();
-        NodeOutput response = wf.execute("ask-llm", prompt);
-        WfRunVariable answer = wf.declareStr("answer").asPublic();
+    public void define(final WorkflowThread wf) {
+        final WfRunVariable prompt = wf.declareStr("prompt").required();
+        final NodeOutput response = wf.execute("ask-llm", prompt);
+        final WfRunVariable answer = wf.declareStr("answer").asPublic();
         answer.assign(response);
     }
 }

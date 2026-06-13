@@ -35,17 +35,17 @@ import io.quarkus.arc.profile.IfBuildProfile;
 public class EmailAgentWorkflow implements LHWorkflowDefinition {
 
     @Override
-    public void define(WorkflowThread wf) {
-        WfRunVariable email = wf.declareStr("email").required();
+    public void define(final WorkflowThread wf) {
+        final WfRunVariable email = wf.declareStr("email").required();
 
-        NodeOutput classification = wf.execute("read-email", email);
-        WfRunVariable result = wf.declareJsonObj("classification").asPublic();
+        final NodeOutput classification = wf.execute("read-email", email);
+        final WfRunVariable result = wf.declareJsonObj("classification").asPublic();
         result.assign(classification);
 
-        WfRunVariable type = wf.declareStr("type");
+        final WfRunVariable type = wf.declareStr("type");
         type.assign(result.jsonPath("$.type"));
 
-        WfRunVariable subject = wf.declareStr("subject");
+        final WfRunVariable subject = wf.declareStr("subject");
         subject.assign(result.jsonPath("$.subject"));
 
         wf.doIf(type.isEqualTo("JOB_OPPORTUNITY"), handler -> {

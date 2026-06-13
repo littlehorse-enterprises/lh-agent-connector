@@ -18,18 +18,18 @@ public class GeneralPurposesTask {
     private final GeneralPurposesLLM assistant;
 
     @Inject
-    public GeneralPurposesTask(GeneralPurposesLLM assistant) {
+    public GeneralPurposesTask(final GeneralPurposesLLM assistant) {
         this.assistant = assistant;
     }
 
     @LHTaskMethod(value = "ask-llm", description = "Sends a prompt to the LLM and returns its response.")
-    public String askLlm(String prompt, WorkerContext context) {
+    public String askLlm(final String prompt, final WorkerContext context) {
         // Use the WfRunId as the memory id so each WfRun keeps its own conversation context.
-        String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
+        final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         LOG.info("Received prompt for LLM (wfRunId={}): {}", memoryId, prompt);
         try {
             return assistant.answer(memoryId, prompt);
-        } catch (NonRetriableException e) {
+        } catch (final NonRetriableException e) {
             // Permanent failures (auth/empty credits, misconfiguration, invalid request): do not
             // retry. Throwing LHTaskException raises a business EXCEPTION instead of a retryable
             // TASK_FAILURE.
