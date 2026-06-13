@@ -26,9 +26,10 @@ dependencies {
     implementation "io.quarkus:quarkus-smallrye-health"
     implementation "io.quarkus:quarkus-logging-json"
 
-    // langchain4j (OpenAI)
+    // langchain4j
     implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-ollama"
 
     // littlehorse
     implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }

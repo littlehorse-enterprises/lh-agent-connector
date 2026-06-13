@@ -23,9 +23,21 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
 - JDK 25
 - A running LittleHorse server (defaults to `localhost:2023`)
 
+## Choosing the LLM provider
+
+The agents can run against either OpenAI (GPT) or a local Ollama model. Select the active provider
+with the `quarkus.langchain4j.chat-model.provider` property (defaults to `openai`):
+
+- `openai` — requires an API key (`quarkus.langchain4j.openai.api-key`); model set via
+  `quarkus.langchain4j.openai.chat-model.model-name`.
+- `ollama` — requires a running [Ollama](https://ollama.com/) server; model set via
+  `quarkus.langchain4j.ollama.chat-model.model-name`.
+
 ## Running
 
-Start the application in dev mode (registers the dev-profile workflows):
+Start the application in dev mode (registers the dev-profile workflows).
+
+Using OpenAI (default):
 
 ```bash
 ./gradlew quarkusDev \
@@ -34,6 +46,17 @@ Start the application in dev mode (registers the dev-profile workflows):
   -Dlhc.api.port=2023 \
   -Dquarkus.http.port=9091 \
   -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
+```
+
+Using Ollama:
+
+```bash
+./gradlew quarkusDev \
+  -Dquarkus.log.category.\"io.littlehorse.connector\".level=DEBUG \
+  -Dlhc.api.host=localhost \
+  -Dlhc.api.port=2023 \
+  -Dquarkus.http.port=9091 \
+  -Dquarkus.langchain4j.chat-model.provider=ollama
 ```
 
 ## Trying the workflows
