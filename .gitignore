@@ -41,3 +41,4 @@ bin/
 
 # Others
 .env
+agent-workspace/

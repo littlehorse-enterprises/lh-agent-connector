@@ -14,9 +14,12 @@ import jakarta.enterprise.context.ApplicationScoped;
 /* CAUTION: this agent has memory, so it will remember previous interactions */
 public interface GeneralPurposesLLM {
 
-    // The system message is supplied at call time (sourced from configuration) so the persona can be
-    // changed without recompiling.
+    // The system message is supplied at call time (sourced from configuration) so the persona can
+    // be changed without recompiling.
     @SystemMessage("{systemMessage}")
     @UserMessage("{prompt}")
-    String answer(@MemoryId String memoryId, @V("systemMessage") String systemMessage, @V("prompt") String prompt);
+    String answer(
+            @MemoryId String memoryId,
+            @V("systemMessage") String systemMessage,
+            @V("prompt") String prompt);
 }

@@ -55,8 +55,8 @@ public class FilesystemAgentWorkflow implements LHWorkflowDefinition {
 
             loop.doIf(status.isEqualTo("NEEDS_INPUT"), needsInput -> {
                         // Human-in-the-loop: pause until a human answers the agent's question.
-                        final UserTaskOutput userTask = needsInput.assignUserTask(
-                                        "provide-agent-info", null, "agent-operators")
+                        final UserTaskOutput userTask = needsInput
+                                .assignUserTask("provide-agent-info", null, "agent-operators")
                                 .withNotes(message);
                         userTaskForm.assign(userTask);
                         humanAnswer.assign(userTaskForm.jsonPath("$.answer"));

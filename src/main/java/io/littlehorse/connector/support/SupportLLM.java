@@ -14,8 +14,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public interface SupportLLM {
 
-    @SystemMessage(
-            """
+    @SystemMessage("""
             You triage customer support tickets written in natural language. Classify the ticket
             into exactly one type and return a JSON object with two fields: `type` and `summary`.
 
@@ -28,14 +27,12 @@ public interface SupportLLM {
     @UserMessage("{ticket}")
     SupportClassification classify(String ticket);
 
-    @SystemMessage(
-            """
+    @SystemMessage("""
             You are a friendly customer support agent. Using the original ticket and the resolution
             notes provided by a human agent, write a short, polite reply addressed to the customer.
             Only output the reply text.
             """)
-    @UserMessage(
-            """
+    @UserMessage("""
             Original ticket:
             {ticket}
 

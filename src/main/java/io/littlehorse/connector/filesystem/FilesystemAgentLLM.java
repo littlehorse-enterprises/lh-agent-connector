@@ -18,8 +18,7 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public interface FilesystemAgentLLM {
 
-    @SystemMessage(
-            """
+    @SystemMessage("""
             You are a filesystem assistant with access to MCP filesystem tools. You help the user
             accomplish tasks on files within the allowed directory.
 
@@ -37,6 +36,10 @@ public interface FilesystemAgentLLM {
               - When the task is fully complete, set `status` to DONE and `message` to a short
                 summary of what you did.
             """)
+    /*
+    If no mcp server name is given, the agent uses every MCP server configured via
+    `quarkus.langchain4j.mcp.*`, so the available tools are driven entirely by configuration.
+    */
     @McpToolBox("filesystem")
     AgentResponse work(@MemoryId String memoryId, @UserMessage String message);
 }

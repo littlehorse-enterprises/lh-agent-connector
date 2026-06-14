@@ -1,14 +1,17 @@
 package io.littlehorse.connector.filesystem;
 
 import io.quarkus.runtime.Startup;
+
 import jakarta.annotation.PostConstruct;
 import jakarta.enterprise.context.ApplicationScoped;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 /**
  * Ensures the filesystem agent's workspace directory exists before the MCP filesystem server starts.
@@ -25,7 +28,8 @@ public class AgentWorkspaceInitializer {
 
     private final String workspace;
 
-    public AgentWorkspaceInitializer(@ConfigProperty(name = "lhc.agent.workspace") final String workspace) {
+    public AgentWorkspaceInitializer(
+            @ConfigProperty(name = "lhc.agent.workspace") final String workspace) {
         this.workspace = workspace;
     }
 
@@ -36,7 +40,8 @@ public class AgentWorkspaceInitializer {
             Files.createDirectories(path);
             LOG.info("Filesystem agent workspace ready at {}", path);
         } catch (final IOException e) {
-            throw new IllegalStateException("Could not create filesystem agent workspace at " + path, e);
+            throw new IllegalStateException(
+                    "Could not create filesystem agent workspace at " + path, e);
         }
     }
 }

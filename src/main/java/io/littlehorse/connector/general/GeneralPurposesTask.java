@@ -57,8 +57,8 @@ public class GeneralPurposesTask {
         // Use the WfRunId as the memory id so the question is answered within this WfRun's context.
         final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         try {
-            final String topic =
-                    assistant.answer(memoryId, systemMessage, "What are we talking about in this session?");
+            final String topic = assistant.answer(
+                    memoryId, systemMessage, "What are we talking about in this session?");
             LOG.info("Current topic (wfRunId={}): {}", memoryId, topic);
             return topic;
         } catch (final NonRetriableException e) {
