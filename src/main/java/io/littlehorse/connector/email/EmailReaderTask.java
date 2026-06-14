@@ -25,7 +25,7 @@ public class EmailReaderTask {
 
     @LHTaskMethod(
             value = "read-email",
-            description = "Classifies an email as SPAM, JOB_OPPORTUNITY or NOT_IMPORTANT.")
+            description = "Classifies an email as SPAM, SALES_OPPORTUNITY or NOT_IMPORTANT.")
     public EmailClassification readEmail(final String email) {
         LOG.info("Classifying email of length {}", email == null ? 0 : email.length());
         try {

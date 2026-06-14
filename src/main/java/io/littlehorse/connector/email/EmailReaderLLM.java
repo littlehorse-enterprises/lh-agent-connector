@@ -20,8 +20,9 @@ public interface EmailReaderLLM {
             Rules:
             - If the email is spam, set `type` to SPAM and `subject` to a short explanation of the
               possible cause, e.g. "Possible spam because <cause>".
-            - If the email is a job opportunity, set `type` to JOB_OPPORTUNITY and `subject` to a
-              summary that includes the company and any other relevant information.
+            - If the email is a sales opportunity (a lead or prospect interested in our product
+              or service), set `type` to SALES_OPPORTUNITY and `subject` to a summary that
+              includes the company and any other relevant information.
             - Otherwise set `type` to NOT_IMPORTANT and `subject` to the subject of the email.
             """)
     @UserMessage("{email}")

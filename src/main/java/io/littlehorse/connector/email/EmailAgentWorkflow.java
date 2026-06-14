@@ -9,17 +9,17 @@ import io.quarkus.arc.profile.IfBuildProfile;
 
 /**
  * Dev-only workflow that reads an email, classifies it, and sends a Slack notification when the
- * email is a job opportunity.
+ * email is a sales opportunity (a lead or prospect interested in our product).
  *
  * <p>Run it with lhctl, e.g.:
  *
  * <pre>
  * lhctl run email-workflow email "
- * Subject: Software Engineer position at Acme Corp
+ * Subject: Interested in your product for Acme Corp
  *
- * Hi, we came across your profile and would love to talk about a Senior Backend
- * Engineer role at Acme Corp. The position is remote and the salary range is
- * competitive. Are you available for a quick call this week?
+ * Hi, we came across your product and would love to talk about adopting it at
+ * Acme Corp. We have a team of 50 engineers and a budget approved for this
+ * quarter. Are you available for a quick call this week?
  * "
  *
  * lhctl run email-workflow email "
@@ -48,7 +48,7 @@ public class EmailAgentWorkflow implements LHWorkflowDefinition {
         final WfRunVariable subject = wf.declareStr("subject");
         subject.assign(result.jsonPath("$.subject"));
 
-        wf.doIf(type.isEqualTo("JOB_OPPORTUNITY"), handler -> {
+        wf.doIf(type.isEqualTo("SALES_OPPORTUNITY"), handler -> {
             handler.execute(
                     "saddle-bag-slack-post-message",
                     "saddle-bag-test",

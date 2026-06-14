@@ -5,7 +5,7 @@ public record EmailClassification(EmailType type, String subject) {
 
     public enum EmailType {
         SPAM,
-        JOB_OPPORTUNITY,
+        SALES_OPPORTUNITY,
         NOT_IMPORTANT
     }
 }

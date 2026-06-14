@@ -18,10 +18,10 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
   - `ask-llm-workflow` (dev only): runs `ask-llm`, then `print-topic`, exposing both the answer and
     the inferred topic.
 - **`email` package** — an email classifier.
-  - `read-email` task: classifies an email as `SPAM`, `JOB_OPPORTUNITY` or `NOT_IMPORTANT`
+  - `read-email` task: classifies an email as `SPAM`, `SALES_OPPORTUNITY` or `NOT_IMPORTANT`
     (the email assistant has no memory).
   - `email-workflow` (dev only): classifies an email and posts a Slack notification when
-    it is a job opportunity.
+    it is a sales opportunity.
 - **`support` package** — a human-in-the-loop support agent.
   - `classify-support-ticket` task: classifies a ticket as `FEEDBACK` or `SUPPORT_REQUEST`.
   - `support-workflow` (dev only): logs plain feedback, or — for a support request — pauses on a
@@ -95,13 +95,13 @@ lhctl run ask-llm-workflow prompt "List all star wars movies"
 ### Email classifier (`email-workflow`)
 
 ```bash
-# Job opportunity (triggers a Slack notification)
+# Sales opportunity (triggers a Slack notification)
 lhctl run email-workflow email "
-Subject: Software Engineer position at Acme Corp
+Subject: Interested in your product for Acme Corp
 
-Hi, we came across your profile and would love to talk about a Senior Backend
-Engineer role at Acme Corp. The position is remote and the salary range is
-competitive. Are you available for a quick call this week?
+Hi, we came across your product and would love to talk about adopting it at
+Acme Corp. We have a team of 50 engineers and a budget approved for this
+quarter. Are you available for a quick call this week?
 "
 
 # Spam
@@ -113,7 +113,7 @@ free prize now before it expires. Limited time only.
 "
 ```
 
-> The `email-workflow` job-opportunity branch calls the `saddle-bag-slack-post-message`
+> The `email-workflow` sales-opportunity branch calls the `saddle-bag-slack-post-message`
 > task, which must be served by another worker for the Slack notification to be delivered. See [lh-saddle-bags](https://github.com/littlehorse-enterprises/lh-saddle-bags).
 
 ### Human-in-the-loop support agent (`support-workflow`)
