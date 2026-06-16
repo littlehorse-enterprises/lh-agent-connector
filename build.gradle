@@ -26,6 +26,9 @@ dependencies {
     implementation "io.quarkus:quarkus-smallrye-health"
     implementation "io.quarkus:quarkus-logging-json"
 
+    // metrics (Micrometer + Prometheus exporter)
+    implementation "io.quarkus:quarkus-micrometer-registry-prometheus"
+
     // langchain4j
     implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
