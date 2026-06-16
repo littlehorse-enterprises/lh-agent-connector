@@ -137,7 +137,7 @@ lhctl run support-workflow ticket "I was charged twice for my subscription this 
 lhctl run filesystem-workflow task "Delete every .log file in the workspace directory."
 
 # Needs more info to continue
-lhctl run filesystem-workflow task "Create a notes.txt file, but ask me what to write in it."
+lhctl run filesystem-workflow task "Create a notes.txt file in the workspace directory, but ask me what to write in it."
 ```
 
 > The `filesystem-workflow` loops: whenever the agent needs more info or approval it pauses on

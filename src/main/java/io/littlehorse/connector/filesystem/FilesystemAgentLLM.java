@@ -3,6 +3,7 @@ package io.littlehorse.connector.filesystem;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 import io.quarkiverse.langchain4j.RegisterAiService;
 import io.quarkiverse.langchain4j.mcp.runtime.McpToolBox;
@@ -18,9 +19,15 @@ import jakarta.enterprise.context.ApplicationScoped;
 @ApplicationScoped
 public interface FilesystemAgentLLM {
 
-    @SystemMessage("""
+    @SystemMessage(
+            """
             You are a filesystem assistant with access to MCP filesystem tools. You help the user
             accomplish tasks on files within the allowed directory.
+
+            The allowed directory (your workspace) is: {workspace}
+            All file paths you use must stay inside that directory. When the user gives a relative
+            path or a bare file name, resolve it against the workspace. You still must ask the human
+            whenever the target path, directory or file name is genuinely ambiguous or missing.
 
             Human-in-the-loop rules:
             - Before doing anything destructive or irreversible (deleting, overwriting or moving
@@ -41,5 +48,5 @@ public interface FilesystemAgentLLM {
     `quarkus.langchain4j.mcp.*`, so the available tools are driven entirely by configuration.
     */
     @McpToolBox("filesystem")
-    AgentResponse work(@MemoryId String memoryId, @UserMessage String message);
+    AgentResponse work(@MemoryId String memoryId, @V("workspace") String workspace, @UserMessage String message);
 }

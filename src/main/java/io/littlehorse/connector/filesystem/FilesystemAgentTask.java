@@ -10,6 +10,7 @@ import io.littlehorse.sdk.worker.WorkerContext;
 
 import jakarta.inject.Inject;
 
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -19,10 +20,14 @@ public class FilesystemAgentTask {
     private static final Logger LOG = LoggerFactory.getLogger(FilesystemAgentTask.class);
 
     private final FilesystemAgentLLM agent;
+    private final String workspace;
 
     @Inject
-    public FilesystemAgentTask(final FilesystemAgentLLM agent) {
+    public FilesystemAgentTask(
+            final FilesystemAgentLLM agent,
+            @ConfigProperty(name = "lhc.agent.workspace") final String workspace) {
         this.agent = agent;
+        this.workspace = workspace;
     }
 
     @LHTaskMethod(
@@ -34,7 +39,7 @@ public class FilesystemAgentTask {
         final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         LOG.info("Running filesystem agent turn (wfRunId={})", memoryId);
         try {
-            final AgentResponse response = agent.work(memoryId, message);
+            final AgentResponse response = agent.work(memoryId, workspace, message);
             LOG.info("Agent turn finished with status {}", response.status());
             return response;
         } catch (final NonRetriableException e) {
