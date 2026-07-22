@@ -13,10 +13,16 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
   - `ask-llm` task: forwards a prompt to the LLM and returns its response. The assistant keeps a
     per-`WfRun` conversation memory (keyed by `WfRunId`) and its persona is configurable via the
     `lhc.general.system-message` property (no recompile needed).
+  - `ask-llm-with-inline-struct` task: accepts a LittleHorse `InlineStruct`, converts the protobuf
+    value to JSON, and passes that JSON to the LLM. This demonstrates how an LH `STRUCT` task input
+    can be consumed as a raw protobuf while Quarkus registers its schema from the `StructuredPrompt`
+    Java class.
   - `print-topic` task: asks the LLM what the current session is about and returns the summary,
     demonstrating the shared per-`WfRun` memory.
   - `ask-llm-workflow` (dev only): runs `ask-llm`, then `print-topic`, exposing both the answer and
     the inferred topic.
+  - `ask-llm-with-inline-struct-workflow` (dev only): accepts a registered `StructuredPrompt`
+    workflow variable and passes it to `ask-llm-with-inline-struct`.
 - **`email` package** — an email classifier.
   - `read-email` task: classifies an email as `SPAM`, `SALES_OPPORTUNITY` or `NOT_IMPORTANT`
     (the email assistant has no memory).
@@ -90,6 +96,18 @@ With the application running and `lhctl` pointed at the same LittleHorse server:
 
 ```bash
 lhctl run ask-llm-workflow prompt "List all star wars movies"
+```
+
+### Structured prompt (`ask-llm-with-inline-struct-workflow`)
+
+The `StructuredPrompt` class is annotated with `@LHStructDef` so Quarkus registers its schema with
+LittleHorse. The workflow declares an input using that Java class, while the task receives the value
+as an `InlineStruct` bound to the same StructDef through `@LHType`. The protobuf is converted to JSON
+before it is sent to the LLM.
+
+```bash
+lhctl run ask-llm-with-inline-struct-workflow \
+  structured-prompt '{"prompt":"Suggest a deployment strategy","context":"A Quarkus service running on Kubernetes"}'
 ```
 
 ### Email classifier (`email-workflow`)

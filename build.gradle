@@ -32,6 +32,7 @@ dependencies {
     // langchain4j
     implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-anthropic"
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-ollama"
     implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-mcp"
 
