@@ -57,11 +57,13 @@ custom `RedisChatMemoryStore`, so chat history survives application/container re
 
 ## Choosing the LLM provider
 
-The agents can run against either OpenAI (GPT) or a local Ollama model. Select the active provider
-with the `quarkus.langchain4j.chat-model.provider` property (defaults to `openai`):
+The agents can run against OpenAI (GPT), Anthropic (Claude), or a local Ollama model. Select the
+active provider with the `quarkus.langchain4j.chat-model.provider` property (defaults to `openai`):
 
 - `openai` — requires an API key (`quarkus.langchain4j.openai.api-key`); model set via
   `quarkus.langchain4j.openai.chat-model.model-name`.
+- `anthropic` — requires an API key (`quarkus.langchain4j.anthropic.api-key`); model set via
+  `quarkus.langchain4j.anthropic.chat-model.model-name`.
 - `ollama` — requires a running [Ollama](https://ollama.com/) server; model set via
   `quarkus.langchain4j.ollama.chat-model.model-name`.
 
@@ -80,6 +82,14 @@ Using OpenAI (default):
 
 ```bash
 ./gradlew quarkusDev -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
+```
+
+Using Anthropic:
+
+```bash
+./gradlew quarkusDev \
+  -Dquarkus.langchain4j.chat-model.provider=anthropic \
+  -Dquarkus.langchain4j.anthropic.api-key=sk-ant-your-anthropic-token
 ```
 
 Using Ollama:
