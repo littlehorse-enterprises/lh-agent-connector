@@ -5,7 +5,9 @@ import dev.langchain4j.exception.NonRetriableException;
 import io.littlehorse.quarkus.task.LHTask;
 import io.littlehorse.sdk.common.LHLibUtil;
 import io.littlehorse.sdk.common.exception.LHTaskException;
+import io.littlehorse.sdk.common.proto.InlineStruct;
 import io.littlehorse.sdk.worker.LHTaskMethod;
+import io.littlehorse.sdk.worker.LHType;
 import io.littlehorse.sdk.worker.WorkerContext;
 
 import jakarta.inject.Inject;
@@ -48,6 +50,18 @@ public class GeneralPurposesTask {
         }
         // RetriableException (timeouts, rate limits, server errors) and any other RuntimeException
         // propagate as a retryable TASK_FAILURE so LittleHorse retries the task.
+    }
+
+    @LHTaskMethod(
+            value = "ask-llm-with-inline-struct",
+            description = "Converts an InlineStruct to JSON and sends it to the LLM.")
+    public String askLlmWithInlineStruct(
+            @LHType(structDefName = "${lhc.general.structured-prompt.name}")
+                    final InlineStruct input,
+            final WorkerContext context) {
+        final String json = LHLibUtil.protoToJson(input);
+        LOG.info("Converted InlineStruct with {} fields to JSON", input.getFieldsCount());
+        return askLlm(json, context);
     }
 
     @LHTaskMethod(
