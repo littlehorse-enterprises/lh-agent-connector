@@ -13,20 +13,15 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
   - `ask-llm` task: forwards a prompt to the LLM and returns its response. The assistant keeps a
     per-`WfRun` conversation memory (keyed by `WfRunId`) and its persona is configurable via the
     `lhc.general.system-message` property (no recompile needed).
-  - `ask-llm-with-inline-struct` task: accepts a LittleHorse `InlineStruct`, converts the protobuf
-    value to JSON, and passes that JSON to the LLM. This demonstrates how an LH `STRUCT` task input
-    can be consumed as a raw protobuf while Quarkus registers its schema from the `StructuredPrompt`
-    Java class.
   - `print-topic` task: asks the LLM what the current session is about and returns the summary,
     demonstrating the shared per-`WfRun` memory.
   - `ask-llm-workflow` (dev only): runs `ask-llm`, then `print-topic`, exposing both the answer and
     the inferred topic.
-  - `ask-llm-with-inline-struct-workflow` (dev only): accepts a registered `StructuredPrompt`
-    workflow variable and passes it to `ask-llm-with-inline-struct`.
 - **`email` package** — an email classifier.
   - `read-email` task: classifies an email as `SPAM`, `SALES_OPPORTUNITY` or `NOT_IMPORTANT`
     (the email assistant has no memory).
-  - `email-workflow` (dev only): classifies an email and posts a Slack notification when
+  - `send-alert` task: dummy alert sender that logs the alert message.
+  - `email-workflow` (dev only): classifies an email and sends an alert when
     it is a sales opportunity.
 - **`support` package** — a human-in-the-loop support agent.
   - `classify-support-ticket` task: classifies a ticket as `FEEDBACK` or `SUPPORT_REQUEST`.
@@ -40,15 +35,15 @@ with OpenAI to expose LLM-backed task workers, plus example workflows registered
     needs more info or approval it pauses on a `UserTask`; the human's answer is fed back and the
     conversation continues until the task is done.
 
-Conversation memory for the stateful agents (`general`, `filesystem`) is persisted in Redis via a
-custom `RedisChatMemoryStore`, so chat history survives application/container restarts.
+Conversation memory for the stateful agents (`general`, `filesystem`) is persisted in PostgreSQL via
+a custom `PostgresChatMemoryStore`, so chat history survives application/container restarts.
 
 ## Prerequisites
 
 - JDK 25
 - A running LittleHorse server (defaults to `localhost:2023`)
-- A running Redis instance for persistent chat memory (defaults to `localhost:6379`, set via
-  `quarkus.redis.hosts`).
+- A running PostgreSQL instance for persistent chat memory (defaults to `localhost:5432`, database
+  `lh_agent`, set via `quarkus.datasource.*`).
 - Optionally [Ollama](https://ollama.com/): if it is installed and running locally, Quarkus uses
   that instance instead of starting an Ollama dev service automatically.
 - Node.js (only for the `filesystem` package): its MCP server is launched with `npx`. The agent's
@@ -69,11 +64,11 @@ active provider with the `quarkus.langchain4j.chat-model.provider` property (def
 
 ## Infrastructure
 
-The LittleHorse server, Kafka and Redis can be started locally with the bundled Compose file via
+The LittleHorse server, Kafka and PostgreSQL can be started locally with the bundled Compose file via
 Gradle (versions are taken from `gradle.properties`):
 
 ```bash
-./gradlew dockerComposeUp    # start LittleHorse, Kafka and Redis
+./gradlew dockerComposeUp    # start LittleHorse, Kafka and PostgreSQL
 ./gradlew dockerComposeDown  # stop them and remove volumes
 ```
 
@@ -81,7 +76,7 @@ Gradle (versions are taken from `gradle.properties`):
 Using OpenAI (default):
 
 ```bash
-./gradlew quarkusDev -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
+./gradlew quarkusDev -Dquarkus.langchain4j.openai.api-key="${OPENAI_API_KEY}"
 ```
 
 Using Anthropic:
@@ -89,7 +84,7 @@ Using Anthropic:
 ```bash
 ./gradlew quarkusDev \
   -Dquarkus.langchain4j.chat-model.provider=anthropic \
-  -Dquarkus.langchain4j.anthropic.api-key=sk-ant-your-anthropic-token
+  -Dquarkus.langchain4j.anthropic.api-key="${ANTHROPIC_API_KEY}"
 ```
 
 Using Ollama:
@@ -108,22 +103,10 @@ With the application running and `lhctl` pointed at the same LittleHorse server:
 lhctl run ask-llm-workflow prompt "List all star wars movies"
 ```
 
-### Structured prompt (`ask-llm-with-inline-struct-workflow`)
-
-The `StructuredPrompt` class is annotated with `@LHStructDef` so Quarkus registers its schema with
-LittleHorse. The workflow declares an input using that Java class, while the task receives the value
-as an `InlineStruct` bound to the same StructDef through `@LHType`. The protobuf is converted to JSON
-before it is sent to the LLM.
-
-```bash
-lhctl run ask-llm-with-inline-struct-workflow \
-  structured-prompt '{"prompt":"Suggest a deployment strategy","context":"A Quarkus service running on Kubernetes"}'
-```
-
 ### Email classifier (`email-workflow`)
 
 ```bash
-# Sales opportunity (triggers a Slack notification)
+# Sales opportunity (triggers an alert)
 lhctl run email-workflow email "
 Subject: Interested in your product for Acme Corp
 
@@ -141,9 +124,6 @@ free prize now before it expires. Limited time only.
 "
 ```
 
-> The `email-workflow` sales-opportunity branch calls the `saddle-bag-slack-post-message`
-> task, which must be served by another worker for the Slack notification to be delivered. See [lh-saddle-bags](https://github.com/littlehorse-enterprises/lh-saddle-bags).
-
 ### Human-in-the-loop support agent (`support-workflow`)
 
 ```bash
@@ -160,17 +140,33 @@ lhctl run support-workflow ticket "I was charged twice for my subscription this 
 
 ### Conversational filesystem agent (`filesystem-workflow`)
 
-```bash
-# Needs approval before a destructive action
-lhctl run filesystem-workflow task "Delete every .log file in the workspace directory."
+This walks through a multi-turn run where the agent first asks what to create, then you answer via a
+UserTask, and the agent produces the files.
 
-# Needs more info to continue
-lhctl run filesystem-workflow task "Create a notes.txt file in the workspace directory, but ask me what to write in it."
+```bash
+# 1. Start the workflow. The agent pauses and asks what it should create.
+lhctl run filesystem-workflow task "Create some files in the workspace, but first ask me exactly what files to create and what each one should contain."
+# -> prints the WfRunId, e.g. 4d1a0c9e6f4b4b0e9c2f1a2b3c4d5e6f
 ```
 
-> The `filesystem-workflow` loops: whenever the agent needs more info or approval it pauses on
-> the `provide-agent-info` UserTask (the agent's question is shown in the task notes). Complete it
-> to feed your answer back to the agent and continue the conversation until the task is done.
+```bash
+# 2. Find the pending UserTask for that WfRun (returns its userTaskGuid).
+lhctl search userTaskRun <wfRunId>
+
+# Optional: read the task to see the agent's question in the notes.
+lhctl get userTaskRun <wfRunId> <userTaskGuid>
+```
+
+```bash
+# 3. Complete the UserTask. lhctl prompts for your userId, then the "Answer" field.
+lhctl execute userTaskRun <wfRunId> <userTaskGuid>
+# userId: alice
+# Answer: Create one file per Star Wars movie. Name each file after the movie
+#         and write that movie's score inside the file.
+```
+
+The agent resumes, creates one file per movie (each containing the movie's score), and — if it needs
+another confirmation — pauses on a new UserTask. Repeat steps 2–3 until the workflow finishes.
 
 ## Building
 

@@ -49,10 +49,7 @@ public class EmailAgentWorkflow implements LHWorkflowDefinition {
         subject.assign(result.jsonPath("$.subject"));
 
         wf.doIf(type.isEqualTo("SALES_OPPORTUNITY"), handler -> {
-            // handler.execute(
-            //         "saddle-bag-slack-post-message",
-            //         "saddle-bag-test",
-            //         wf.format("Email alert [{0}]: {1}", type, subject));
+            handler.execute("send-alert", wf.format("Email alert [{0}]: {1}", type, subject));
         });
     }
 }

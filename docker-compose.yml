@@ -57,19 +57,23 @@ services:
     volumes:
       - lh_data:/var/lib/lh/data
 
-  redis:
-    image: redis:${REDIS_VERSION}
+  postgres:
+    image: postgres:${POSTGRES_VERSION}
     restart: on-failure
     ports:
-      - "6379:6379"
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: lh
+      POSTGRES_PASSWORD: lh
+      POSTGRES_DB: lh_agent
     healthcheck:
-      test: redis-cli ping | grep -q PONG
+      test: pg_isready -U lh -d lh_agent
       interval: 10s
       timeout: 10s
       retries: 5
       start_period: 10s
     volumes:
-      - redis_data:/data
+      - postgres_data:/var/lib/postgresql/data
 
   dashboard:
     image: ghcr.io/littlehorse-enterprises/littlehorse/lh-dashboard:${LH_VERSION}
@@ -93,7 +97,7 @@ services:
 volumes:
   kafka_data:
   lh_data:
-  redis_data:
+  postgres_data:
 
 networks:
   default:
