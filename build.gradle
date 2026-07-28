@@ -26,6 +26,10 @@ dependencies {
     implementation "io.quarkus:quarkus-smallrye-health"
     implementation "io.quarkus:quarkus-logging-json"
 
+    // rest (server endpoints + JSON)
+    implementation "io.quarkus:quarkus-rest"
+    implementation "io.quarkus:quarkus-rest-jackson"
+
     // metrics (Micrometer + Prometheus exporter)
     implementation "io.quarkus:quarkus-micrometer-registry-prometheus"
 

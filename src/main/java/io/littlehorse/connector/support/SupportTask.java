@@ -1,10 +1,9 @@
 package io.littlehorse.connector.support;
 
-import dev.langchain4j.exception.NonRetriableException;
-
+import io.littlehorse.connector.logging.LlmContext;
 import io.littlehorse.quarkus.task.LHTask;
-import io.littlehorse.sdk.common.exception.LHTaskException;
 import io.littlehorse.sdk.worker.LHTaskMethod;
+import io.littlehorse.sdk.worker.WorkerContext;
 
 import jakarta.inject.Inject;
 
@@ -26,14 +25,9 @@ public class SupportTask {
     @LHTaskMethod(
             value = "classify-support-ticket",
             description = "Classifies a support ticket as FEEDBACK or SUPPORT_REQUEST.")
-    public SupportClassification classifyTicket(final String ticket) {
+    public SupportClassification classifyTicket(final String ticket, final WorkerContext context) {
         LOG.info("Classifying support ticket ({} chars)", ticket.length());
-        try {
-            return assistant.classify(ticket);
-        } catch (final NonRetriableException e) {
-            LOG.error("Non-retriable LLM error while classifying support ticket", e);
-            throw new LHTaskException("llm-non-retriable", e.getMessage());
-        }
+        return LlmContext.runLlmTask(context, () -> assistant.classify(ticket));
     }
 
     @LHTaskMethod(
@@ -46,13 +40,9 @@ public class SupportTask {
     @LHTaskMethod(
             value = "draft-support-reply",
             description = "Drafts a customer reply from the human agent's resolution notes.")
-    public String draftReply(final String ticket, final String resolution) {
+    public String draftReply(
+            final String ticket, final String resolution, final WorkerContext context) {
         LOG.info("Drafting support reply from human resolution notes");
-        try {
-            return assistant.draftReply(ticket, resolution);
-        } catch (final NonRetriableException e) {
-            LOG.error("Non-retriable LLM error while drafting support reply", e);
-            throw new LHTaskException("llm-non-retriable", e.getMessage());
-        }
+        return LlmContext.runLlmTask(context, () -> assistant.draftReply(ticket, resolution));
     }
 }

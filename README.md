@@ -161,8 +161,7 @@ lhctl get userTaskRun <wfRunId> <userTaskGuid>
 # 3. Complete the UserTask. lhctl prompts for your userId, then the "Answer" field.
 lhctl execute userTaskRun <wfRunId> <userTaskGuid>
 # userId: alice
-# Answer: Create one file per Star Wars movie. Name each file after the movie
-#         and write that movie's score inside the file.
+# Answer: Create one file per Star Wars movie. Name each file after the movie and write that movie's score inside the file.
 ```
 
 The agent resumes, creates one file per movie (each containing the movie's score), and — if it needs
@@ -173,3 +172,25 @@ another confirmation — pauses on a new UserTask. Repeat steps 2–3 until the 
 ```bash
 ./gradlew build
 ```
+
+## Inspecting logged LLM interactions
+
+Every LLM request/response is persisted to the `llm_interaction` table in PostgreSQL and correlated
+with the LittleHorse `TaskRunId` that triggered it. A REST endpoint returns those records as JSON:
+
+```bash
+# Fetch all interactions logged for a given TaskRunId.
+# The TaskRunId has the form "<wfRunId>/<...>" (e.g. 1c9b5276884b4cc497c6b0013ebc9e68/0-1)
+# and is passed as a path parameter (the slash is part of the path).
+curl -s "http://localhost:9091/llm-interactions/1c9b5276884b4cc497c6b0013ebc9e68/0-1"
+```
+
+```bash
+# Pretty-print the result with jq.
+curl -s "http://localhost:9091/llm-interactions/1c9b5276884b4cc497c6b0013ebc9e68/0-1" | jq
+```
+
+Each element contains `id`, `createdAt`, `taskRunId`, `model`, the structured `request` and
+`response`, the token counts (`promptTokens`, `completionTokens`, `totalTokens`) and `error` (set
+when the call failed).
+

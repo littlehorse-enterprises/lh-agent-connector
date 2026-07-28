@@ -1,10 +1,8 @@
 package io.littlehorse.connector.filesystem;
 
-import dev.langchain4j.exception.NonRetriableException;
-
+import io.littlehorse.connector.logging.LlmContext;
 import io.littlehorse.quarkus.task.LHTask;
 import io.littlehorse.sdk.common.LHLibUtil;
-import io.littlehorse.sdk.common.exception.LHTaskException;
 import io.littlehorse.sdk.worker.LHTaskMethod;
 import io.littlehorse.sdk.worker.WorkerContext;
 
@@ -38,13 +36,9 @@ public class FilesystemAgentTask {
         // Use the WfRunId as the memory id so the agent keeps the conversation across turns.
         final String memoryId = LHLibUtil.wfRunIdToString(context.getWfRunId());
         LOG.info("Running filesystem agent turn (wfRunId={})", memoryId);
-        try {
-            final AgentResponse response = agent.work(memoryId, workspace, message);
-            LOG.info("Agent turn finished with status {}", response.status());
-            return response;
-        } catch (final NonRetriableException e) {
-            LOG.error("Non-retriable LLM error while running the filesystem agent", e);
-            throw new LHTaskException("llm-non-retriable", e.getMessage());
-        }
+        final AgentResponse response =
+                LlmContext.runLlmTask(context, () -> agent.work(memoryId, workspace, message));
+        LOG.info("Agent turn finished with status {}", response.status());
+        return response;
     }
 }
