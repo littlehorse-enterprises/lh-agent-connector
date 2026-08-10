@@ -4,11 +4,12 @@ import dev.langchain4j.mcp.client.DefaultMcpClient;
 import dev.langchain4j.mcp.client.McpClientListener;
 import dev.langchain4j.mcp.client.McpHeadersSupplier;
 import dev.langchain4j.mcp.client.transport.McpTransport;
-import dev.langchain4j.mcp.client.transport.http.HttpMcpTransport;
 import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
 import dev.langchain4j.mcp.client.transport.websocket.WebSocketMcpTransport;
 
 import io.littlehorse.agent.configuration.McpConfiguration;
+import io.quarkiverse.langchain4j.mcp.auth.McpClientAuthProvider;
+import io.quarkiverse.langchain4j.mcp.runtime.http.QuarkusHttpMcpTransport;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
@@ -19,6 +20,8 @@ import java.util.function.Supplier;
 
 @ApplicationScoped
 public class McpClientFactory {
+
+    private static final McpClientAuthProvider NO_AUTH_PROVIDER = _ -> null;
 
     public DefaultMcpClient create(
             String name,
@@ -65,15 +68,16 @@ public class McpClientFactory {
                 .build();
     }
 
-    @SuppressWarnings("removal")
     private McpTransport sse(
             Optional<Supplier<String>> authSupplier, McpConfiguration.Client configuration) {
-        return HttpMcpTransport.builder()
+        McpHeadersSupplier headers = headerSupplier(configuration.headers(), authSupplier);
+        return new QuarkusHttpMcpTransport.Builder()
                 .sseUrl(configuration.url())
                 .timeout(configuration.timeout())
                 .logRequests(configuration.logRequests())
                 .logResponses(configuration.logResponses())
-                .customHeaders(headerSupplier(configuration.headers(), authSupplier))
+                .mcpClientAuthProvider(NO_AUTH_PROVIDER)
+                .headers(() -> headers.apply(null))
                 .build();
     }
 

@@ -46,9 +46,11 @@ dependencies {
     implementation "com.github.jknack:handlebars:${handlebarsVersion}"
 
     // langchain4j
-    implementation "dev.langchain4j:langchain4j-anthropic:${langchain4jVersion}"
-    implementation "dev.langchain4j:langchain4j-open-ai:${langchain4jVersion}"
-    implementation "dev.langchain4j:langchain4j-mcp:${langchain4jMcpVersion}"
+    implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-core"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-anthropic"
+    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-mcp"
 
     // tests
     testImplementation "io.quarkus:quarkus-junit5"

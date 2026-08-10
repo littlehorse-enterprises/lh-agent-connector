@@ -6,6 +6,8 @@ import io.littlehorse.agent.configuration.AnthropicChatModelConfiguration;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
+import java.time.Duration;
+
 @ApplicationScoped
 public class AnthropicChatModelFactory {
 
@@ -14,7 +16,7 @@ public class AnthropicChatModelFactory {
                 .apiKey(configuration.apiKey())
                 .modelName(configuration.model())
                 .version(configuration.version().orElse("2023-06-01"))
-                .timeout(configuration.timeout().orElse(null))
+                .timeout(configuration.timeout().orElse(Duration.ofSeconds(10)))
                 .temperature(configuration.temperature().orElse(null))
                 .maxTokens(configuration.maxTokens().orElse(1024))
                 .topP(configuration.topP().orElse(null))
