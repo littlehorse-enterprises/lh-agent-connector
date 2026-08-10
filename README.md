@@ -1,179 +1,217 @@
-# lh-agent-connector
+# LittleHorse LangChain4j agent
 
-LH LangChain4j Task Worker Agent.
+This project is a small Quarkus application built with the LittleHorse Quarkus extension. It
+registers and runs one configurable agent task with text or Struct input and output.
 
-A [Quarkus](https://quarkus.io/) application that acts as a [LittleHorse](https://littlehorse.io/)
-task worker and AI agent. It uses [LangChain4j](https://docs.quarkiverse.io/quarkus-langchain4j/dev/)
-with OpenAI to expose LLM-backed task workers, plus example workflows registered only in the
-`dev` profile.
+The agent uses LangChain4j's low-level `ChatModel`, `ChatRequest`, and `ChatResponse` APIs with
+Anthropic or the official OpenAI integration. It does not use LangChain4j AI Services.
 
-## What's inside
+It can also expose tools from any number of Model Context Protocol (MCP) servers. The agent uses
+LangChain4j's low-level MCP client and tool-provider APIs: mapped MCP tool specifications are added
+directly to each `ChatRequest`, and returned tool calls are routed to the matching MCP client.
 
-- **`general` package** — a general purpose assistant.
-  - `ask-llm` task: forwards a prompt to the LLM and returns its response. The assistant keeps a
-    per-`WfRun` conversation memory (keyed by `WfRunId`) and its persona is configurable via the
-    `lhc.general.system-message` property (no recompile needed).
-  - `ask-llm-with-inline-struct` task: accepts a LittleHorse `InlineStruct`, converts the protobuf
-    value to JSON, and passes that JSON to the LLM. This demonstrates how an LH `STRUCT` task input
-    can be consumed as a raw protobuf while Quarkus registers its schema from the `StructuredPrompt`
-    Java class.
-  - `print-topic` task: asks the LLM what the current session is about and returns the summary,
-    demonstrating the shared per-`WfRun` memory.
-  - `ask-llm-workflow` (dev only): runs `ask-llm`, then `print-topic`, exposing both the answer and
-    the inferred topic.
-  - `ask-llm-with-inline-struct-workflow` (dev only): accepts a registered `StructuredPrompt`
-    workflow variable and passes it to `ask-llm-with-inline-struct`.
-- **`email` package** — an email classifier.
-  - `read-email` task: classifies an email as `SPAM`, `SALES_OPPORTUNITY` or `NOT_IMPORTANT`
-    (the email assistant has no memory).
-  - `email-workflow` (dev only): classifies an email and posts a Slack notification when
-    it is a sales opportunity.
-- **`support` package** — a human-in-the-loop support agent.
-  - `classify-support-ticket` task: classifies a ticket as `FEEDBACK` or `SUPPORT_REQUEST`.
-  - `support-workflow` (dev only): logs plain feedback, or — for a support request — pauses on a
-    LittleHorse `UserTask` so a human agent can resolve it, then feeds the agent's notes back to
-    the LLM to draft a customer reply.
-- **`filesystem` package** — a conversational agent with filesystem tools (via MCP).
-  - `run-filesystem-agent` task: runs one agent turn; the agent has memory and the tools of the
-    `filesystem` MCP server, and replies either `DONE` or `NEEDS_INPUT` with a question.
-  - `filesystem-workflow` (dev only): loops the agent and the human — whenever the agent
-    needs more info or approval it pauses on a `UserTask`; the human's answer is fed back and the
-    conversation continues until the task is done.
+## Quarkus and LittleHorse integration
 
-Conversation memory for the stateful agents (`general`, `filesystem`) is persisted in Redis via a
-custom `RedisChatMemoryStore`, so chat history survives application/container restarts.
+Each typed task adapter is annotated with `@LHTask`. Runtime property conditions make exactly one
+task adapter resolvable. The LittleHorse Quarkus extension discovers the annotations and manages
+task registration, worker startup, and shutdown.
 
-## Prerequisites
+All classes annotated with `@LHStructDef` are discovered and registered automatically. The
+`FinishReason` type adapter is a CDI `@Singleton`, so the extension includes it in the injected
+LittleHorse configuration. Quarkus injects the enabled Anthropic or OpenAI `ChatModel` into
+`AgentExecutor`.
 
-- JDK 25
-- A running LittleHorse server (defaults to `localhost:2023`)
-- A running Redis instance for persistent chat memory (defaults to `localhost:6379`, set via
-  `quarkus.redis.hosts`).
-- Optionally [Ollama](https://ollama.com/): if it is installed and running locally, Quarkus uses
-  that instance instead of starting an Ollama dev service automatically.
-- Node.js (only for the `filesystem` package): its MCP server is launched with `npx`. The agent's
-  allowed directory defaults to `${java.io.tmpdir}/lh-agent-workspace` (override with the
-  `lhc.agent.workspace` property).
+The task checkpoints user messages, AI messages, and tool execution results as their corresponding
+LittleHorse structs. On retry, `CheckpointMessages` restores completed messages from checkpoints
+and rebuilds the conversation without repeating completed model or tool calls.
 
-## Choosing the LLM provider
+Exactly one agent task is registered and started. Its typed implementation is inferred from
+`agent.task.input.type` and `agent.task.output.type`; both support `TEXT` and `STRUCT`. Struct input is
+rendered through the statically configured user-message template before it is sent to the model.
+Struct output constrains the model response with the configured output StructDef and converts the
+returned JSON into an `InlineStruct`.
 
-The agents can run against OpenAI (GPT), Anthropic (Claude), or a local Ollama model. Select the
-active provider with the `quarkus.langchain4j.chat-model.provider` property (defaults to `openai`):
+Set the shared task name, types, and any required StructDef names using any Quarkus configuration
+source:
 
-- `openai` — requires an API key (`quarkus.langchain4j.openai.api-key`); model set via
-  `quarkus.langchain4j.openai.chat-model.model-name`.
-- `anthropic` — requires an API key (`quarkus.langchain4j.anthropic.api-key`); model set via
-  `quarkus.langchain4j.anthropic.chat-model.model-name`.
-- `ollama` — requires a running [Ollama](https://ollama.com/) server; model set via
-  `quarkus.langchain4j.ollama.chat-model.model-name`.
-
-## Infrastructure
-
-The LittleHorse server, Kafka and Redis can be started locally with the bundled Compose file via
-Gradle (versions are taken from `gradle.properties`):
-
-```bash
-./gradlew dockerComposeUp    # start LittleHorse, Kafka and Redis
-./gradlew dockerComposeDown  # stop them and remove volumes
+```properties
+agent.task.name=agent
+agent.task.input.type=STRUCT
+agent.task.input.struct.name=agent-input
+agent.user-message-template=Summarize {{struct.customer}} using these details: {{struct.details}}
+agent.task.output.type=STRUCT
+agent.task.output.struct.name=agent-output
+agent.task.output.struct.version=2
 ```
 
+The configured StructDefs must already exist in the target LittleHorse cluster; this application
+does not register those external StructDefs. The input and output types default to `TEXT`. When
+input is set to `STRUCT`, `agent.user-message-template` is required. When output is set to `STRUCT`,
+`agent.task.output.struct.name` is required and its StructDef is fetched and exposed as a
+conditional application-scoped `OutputStructDefCache` CDI bean. The cache contains the root
+StructDef, all transitively referenced version-pinned StructDefs, and the generated JSON schema.
+The output version is optional; when `agent.task.output.struct.version` is omitted, the latest root
+version (`-1`) is checked on each schema request and the snapshot is refreshed only when its
+concrete version changes.
 
-Using OpenAI (default):
+## Configuration
 
-```bash
-./gradlew quarkusDev -Dquarkus.langchain4j.openai.api-key=sk-your-openai-token
+All repository-owned `agent.*` properties are mapped through the root `AgentConfiguration`
+interface. Its `task`, `chat-model`, and `mcp` groups retain the property names documented below.
+
+Select one provider and configure its API key and model beneath the same `agent.chat-model`
+configuration tree. For Anthropic:
+
+```shell
+export AGENT_CHAT_MODEL_PROVIDER=anthropic
+export AGENT_CHAT_MODEL_ANTHROPIC_API_KEY=...
+export AGENT_CHAT_MODEL_ANTHROPIC_MODEL=...
 ```
 
-Using Anthropic:
+For OpenAI:
 
-```bash
-./gradlew quarkusDev \
-  -Dquarkus.langchain4j.chat-model.provider=anthropic \
-  -Dquarkus.langchain4j.anthropic.api-key=sk-ant-your-anthropic-token
+```shell
+export AGENT_CHAT_MODEL_PROVIDER=openai
+export AGENT_CHAT_MODEL_OPENAI_API_KEY=...
+export AGENT_CHAT_MODEL_OPENAI_MODEL=...
 ```
 
-Using Ollama:
+Custom endpoints can optionally be configured with `AGENT_CHAT_MODEL_ANTHROPIC_BASE_URL` or
+`AGENT_CHAT_MODEL_OPENAI_BASE_URL`. Only the selected provider's configuration is required. The
+provider is read when the application starts, so switching it requires a restart but not a rebuild.
 
-```bash
-./gradlew quarkusDev -Dquarkus.langchain4j.chat-model.provider=ollama
+An optional system message can be supplied through Quarkus configuration. When present, it is
+checkpointed and sent as the first message in every new agent conversation:
+
+```shell
+export AGENT_SYSTEM_MESSAGE="You are a concise and helpful assistant."
 ```
 
-## Trying the workflows
+For `STRUCT` input, the required `agent.user-message-template` is compiled once when the application
+starts. Its `struct` root exposes fields using Handlebars paths:
 
-With the application running and `lhctl` pointed at the same LittleHorse server:
-
-### General purpose assistant (`ask-llm-workflow`)
-
-```bash
-lhctl run ask-llm-workflow prompt "List all star wars movies"
+```properties
+agent.user-message-template=Customer {{struct.name}} lives at {{struct.address}}.
 ```
 
-### Structured prompt (`ask-llm-with-inline-struct-workflow`)
+Scalar paths render as text. Rendering an object or array path, including `{{struct}}`, produces
+compact JSON. Direct null values render as empty text, while null values contained in rendered JSON
+objects or arrays remain JSON `null`. Output is not HTML-escaped.
 
-The `StructuredPrompt` class is annotated with `@LHStructDef` so Quarkus registers its schema with
-LittleHorse. The workflow declares an input using that Java class, while the task receives the value
-as an `InlineStruct` bound to the same StructDef through `@LHType`. The protobuf is converted to JSON
-before it is sent to the LLM.
+The template supports only the built-in `if`, `unless`, `each`, `with`, and `lookup` helpers.
+External helpers, `log`, partials (including dynamic, inline, and partial-block forms), decorators,
+and filesystem or classpath template loading are disabled. Changing the template requires an
+application restart.
 
-```bash
-lhctl run ask-llm-with-inline-struct-workflow \
-  structured-prompt '{"prompt":"Suggest a deployment strategy","context":"A Quarkus service running on Kubernetes"}'
+The LittleHorse Quarkus extension reads standard LittleHorse client and worker configuration from
+Quarkus configuration. For example:
+
+```shell
+export LHC_API_HOST=localhost
+export LHC_API_PORT=2023
 ```
 
-### Email classifier (`email-workflow`)
+### MCP servers
 
-```bash
-# Sales opportunity (triggers a Slack notification)
-lhctl run email-workflow email "
-Subject: Interested in your product for Acme Corp
+Configure each MCP server under a unique `agent.mcp.clients` key. Streamable HTTP, legacy HTTP/SSE,
+and WebSocket transports are supported. This example configures two independent clients:
 
-Hi, we came across your product and would love to talk about adopting it at
-Acme Corp. We have a team of 50 engineers and a budget approved for this
-quarter. Are you available for a quick call this week?
-"
-
-# Spam
-lhctl run email-workflow email "
-Subject: You WON a FREE iPhone.
-
-Congratulations. Click this link http://totally-legit.example to claim your
-free prize now before it expires. Limited time only.
-"
+```properties
+agent.mcp.clients."github".transport=streamable-http
+agent.mcp.clients."github".url=https://mcp.example.com/github/mcp
+agent.mcp.clients."github".auth.type=oauth2
+agent.mcp.clients."github".auth.oidc-client=github-oauth
+agent.mcp.clients."github".headers.x-client-name=lh-agent
+agent.mcp.clients."github".timeout=PT30S
+agent.mcp.clients."github".initialization-timeout=PT30S
+agent.mcp.clients."github".tool-execution-timeout=PT60S
+agent.mcp.clients."notifications".transport=websocket
+agent.mcp.clients."notifications".url=wss://mcp.example.com/notifications/ws
+agent.mcp.clients."notifications".auth.type=bearer
+agent.mcp.clients."notifications".auth.token=${NOTIFICATIONS_MCP_TOKEN}
+agent.mcp.clients."public".url=https://mcp.example.com/public/mcp
+agent.mcp.clients."public".auth.type=none
 ```
 
-> The `email-workflow` sales-opportunity branch calls the `saddle-bag-slack-post-message`
-> task, which must be served by another worker for the Slack notification to be delivered. See [lh-saddle-bags](https://github.com/littlehorse-enterprises/lh-saddle-bags).
+MCP configuration is validated during Quarkus startup. Every configured client requires a nonblank,
+supported URL. Authentication type is `none` by default; `bearer` requires only `auth.token`, and
+`oauth2` requires only `auth.oidc-client`. An explicit `Authorization` header cannot be combined
+with `bearer` or `oauth2`. Durations must be valid, and configured header, filter, and mapping values
+cannot be blank. Supported transport values are `streamable-http`, `sse`, and `websocket`.
 
-### Human-in-the-loop support agent (`support-workflow`)
+For a direct bearer token, reference an environment variable rather than storing the token in the
+properties file:
 
-```bash
-# Plain feedback (just logged)
-lhctl run support-workflow ticket "Just wanted to say your new dashboard looks great, keep it up."
-
-# Actionable request (pauses on a UserTask for a human agent)
-lhctl run support-workflow ticket "I was charged twice for my subscription this month, please help."
+```properties
+agent.mcp.clients."github".auth.type=bearer
+agent.mcp.clients."github".auth.token=${GITHUB_MCP_TOKEN}
 ```
 
-> For a support request the `support-workflow` pauses on the `resolve-support-ticket` UserTask.
-> Complete it (e.g. from the LittleHorse dashboard) to resume the workflow; the LLM then drafts the
-> customer reply from the human agent's resolution notes.
-
-### Conversational filesystem agent (`filesystem-workflow`)
-
-```bash
-# Needs approval before a destructive action
-lhctl run filesystem-workflow task "Delete every .log file in the workspace directory."
-
-# Needs more info to continue
-lhctl run filesystem-workflow task "Create a notes.txt file in the workspace directory, but ask me what to write in it."
+```shell
+export GITHUB_MCP_TOKEN=...
 ```
 
-> The `filesystem-workflow` loops: whenever the agent needs more info or approval it pauses on
-> the `provide-agent-info` UserTask (the agent's question is shown in the task notes). Complete it
-> to feed your answer back to the agent and continue the conversation until the task is done.
+OAuth is supplied by a named Quarkus OIDC client. All Quarkus OIDC client grant settings remain
+available as application properties; the MCP transport obtains and refreshes its bearer token:
 
-## Building
+```properties
+quarkus.oidc-client."github-oauth".auth-server-url=https://identity.example.com/realms/tools
+quarkus.oidc-client."github-oauth".client-id=lh-agent
+quarkus.oidc-client."github-oauth".credentials.secret=${MCP_GITHUB_CLIENT_SECRET}
+quarkus.oidc-client."github-oauth".grant.type=client
+quarkus.oidc-client."github-oauth".scopes=mcp:tools
+```
 
-```bash
-./gradlew build
+Filters use the original server-side tool names and run before mappings. The default `all` mode
+exposes every tool. Use `include` to expose only the named tools, or `exclude` to expose every tool
+except the named tools:
+
+```properties
+agent.mcp.clients."github".tools.mode=include
+agent.mcp.clients."github".tools.names=get_issue,list_issues
+```
+
+Each client uses `<client-name>_` as its default tool-name prefix. Configure a different prefix or
+override individual exposed names and descriptions while preserving the MCP server's parameter
+schema:
+
+```properties
+agent.mcp.clients."github".tools.name-prefix=github_
+agent.mcp.clients."github".tools.specification-mapping.get_issue.name=find_issue
+agent.mcp.clients."github".tools.specification-mapping.list_issues.description=Lists issues visible to the authenticated user.
+```
+
+Set `enabled=false` on an individual client to keep its configuration without connecting it.
+Request/response logging, redirect following, and streamable-HTTP subsidiary channels are also
+configurable through the corresponding kebab-case client properties.
+
+The application requires a complete tool catalog from every enabled MCP client; partial catalogs
+are not supported. MCP clients cache their tool lists, and the application-scoped `ToolsManager`
+loads the combined, filtered, and mapped catalog lazily when an agent first needs it. When an MCP
+server sends `notifications/tools/list_changed`, the registered client listener invalidates that
+catalog. The next checkpointed chat or tool execution reloads the complete catalog before
+continuing. If any enabled server is unavailable during a load or reload, that agent invocation
+fails rather than proceeding with an incomplete set of tools.
+
+## Run
+
+Start LittleHorse, then run the application in Quarkus development mode:
+
+```shell
+./gradlew quarkusDev
+```
+
+The configured GitHub MCP client is disabled by default in dev mode so the application can start
+without GitHub credentials. To enable it, provide both settings before starting Quarkus:
+
+```shell
+export GITHUB_MCP_ENABLED=true
+export GITHUB_MCP_TOKEN=...
+```
+
+## Test and build
+
+```shell
+./gradlew test
+./gradlew quarkusBuild
 ```

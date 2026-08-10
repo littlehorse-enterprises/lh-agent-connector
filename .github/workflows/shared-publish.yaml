@@ -1,0 +1,43 @@
+name: shared-publish
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Download JVM application
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-jar
+          path: build/quarkus-app/
+
+      - name: Download native application
+        uses: actions/download-artifact@v8
+        with:
+          name: agent-native
+          path: build/quarkus-run
+
+      - name: Build and publish container image
+        uses: littlehorse-enterprises/publish-image@v1
+        with:
+          image-name: lh-agent-connector
+          dockerfile: Dockerfile
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          ghcr-root: true
+          tags: |
+            type=raw,value=latest,enable=false
+            type=raw,value=${{ inputs.version }},enable=true
+            type=ref,event=branch,enable=${{ github.ref_name == 'main' }}

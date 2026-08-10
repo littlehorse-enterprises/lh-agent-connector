@@ -1,55 +1,6 @@
 plugins {
-    id "java"
-    id "io.quarkus"
     id "com.diffplug.spotless"
-    id "checkstyle"
-}
-
-repositories {
-    mavenCentral()
-    maven {
-        name = "Central Portal Snapshots"
-        url = "https://central.sonatype.com/repository/maven-snapshots/"
-    }
-    mavenLocal()
-}
-
-
-configurations.all {
-    resolutionStrategy.cacheChangingModulesFor 0, 'seconds'
-}
-
-dependencies {
-    // quarkus
-    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
-    implementation "io.quarkus:quarkus-arc"
-    implementation "io.quarkus:quarkus-smallrye-health"
-    implementation "io.quarkus:quarkus-logging-json"
-
-    // metrics (Micrometer + Prometheus exporter)
-    implementation "io.quarkus:quarkus-micrometer-registry-prometheus"
-
-    // langchain4j
-    implementation enforcedPlatform("io.quarkiverse.langchain4j:quarkus-langchain4j-bom:${langchain4jVersion}")
-    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-openai"
-    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-anthropic"
-    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-ollama"
-    implementation "io.quarkiverse.langchain4j:quarkus-langchain4j-mcp"
-
-    // redis (persistent chat memory store)
-    implementation "io.quarkus:quarkus-redis-client"
-
-    // littlehorse
-    implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }
-
-    // logs
-    implementation "org.jboss.slf4j:slf4j-jboss-logmanager"
-
-    // tests
-    testImplementation "io.quarkus:quarkus-junit5"
-    testImplementation "io.rest-assured:rest-assured"
-    testImplementation "org.mockito:mockito-core"
-    testImplementation "org.mockito:mockito-junit-jupiter"
+    id "io.quarkus"
 }
 
 java {
@@ -57,22 +8,15 @@ java {
     targetCompatibility = JavaVersion.VERSION_25
 }
 
-test {
-    testLogging {
-        events "passed", "skipped", "failed"
-        exceptionFormat = "full"
+repositories {
+    mavenCentral()
+    maven {
+        name = "Central Portal Snapshots"
+        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+        content {
+            includeGroup("io.littlehorse")
+        }
     }
-    systemProperty "java.util.logging.manager", "org.jboss.logmanager.LogManager"
-    jvmArgs "--add-opens", "java.base/java.lang=ALL-UNNAMED"
-}
-
-compileJava {
-    options.encoding = "UTF-8"
-    options.compilerArgs << "-parameters"
-}
-
-compileTestJava {
-    options.encoding = "UTF-8"
 }
 
 spotless {
@@ -82,24 +26,42 @@ spotless {
     }
 }
 
-checkstyle {
-    configFile = file("${rootDir}/checkstyle.xml")
-    checkstyleTest.enabled = false
-    checkstyleIntegrationTest.enabled = false
+dependencies {
+
+    // quarkus
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
+    implementation "io.quarkus:quarkus-arc"
+    implementation "io.quarkus:quarkus-hibernate-validator"
+    implementation "io.quarkus:quarkus-oidc-client"
+    implementation "io.quarkus:quarkus-logging-json"
+
+    // logs
+    implementation "org.jboss.slf4j:slf4j-jboss-logmanager"
+
+    // littlehorse
+    implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }
+
+    // Handlebars
+    implementation "com.google.code.gson:gson"
+    implementation "com.github.jknack:handlebars:${handlebarsVersion}"
+
+    // langchain4j
+    implementation "dev.langchain4j:langchain4j-anthropic:${langchain4jVersion}"
+    implementation "dev.langchain4j:langchain4j-open-ai:${langchain4jVersion}"
+    implementation "dev.langchain4j:langchain4j-mcp:${langchain4jMcpVersion}"
+
+    // tests
+    testImplementation "io.quarkus:quarkus-junit5"
+    testImplementation "io.quarkus:quarkus-junit5-mockito"
+    testImplementation "org.assertj:assertj-core:${assertjVersion}"
+    testImplementation "org.junit.jupiter:junit-jupiter"
+    testRuntimeOnly "org.junit.platform:junit-platform-launcher"
 }
 
-tasks.register("dockerComposeUp", Exec) {
-    description = "Starts docker-compose with versions from gradle.properties"
-    commandLine "docker", "compose", "up", "-d"
-    environment "LH_VERSION", version
-    environment "KAFKA_VERSION", kafkaVersion
-    environment "REDIS_VERSION", redisVersion
+compileJava {
+    options.compilerArgs << '-parameters'
 }
 
-tasks.register("dockerComposeDown", Exec) {
-    description = "Stops docker-compose"
-    commandLine "docker", "compose", "down", "-v"
-    environment "LH_VERSION", version
-    environment "KAFKA_VERSION", kafkaVersion
-    environment "REDIS_VERSION", redisVersion
+test {
+    useJUnitPlatform()
 }
