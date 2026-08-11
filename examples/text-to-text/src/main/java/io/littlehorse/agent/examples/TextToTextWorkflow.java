@@ -1,4 +1,4 @@
-package io.littlehorse.agent.examples.texttotext;
+package io.littlehorse.agent.examples;
 
 import io.littlehorse.quarkus.workflow.LHWorkflow;
 import io.littlehorse.quarkus.workflow.LHWorkflowDefinition;
