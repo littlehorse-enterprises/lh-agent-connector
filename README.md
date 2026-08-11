@@ -195,11 +195,16 @@ fails rather than proceeding with an incomplete set of tools.
 
 ## Run
 
-Start LittleHorse, then run the application in Quarkus development mode:
+Export the selected model's credentials, then run the application in Quarkus development mode:
 
 ```shell
 ./gradlew quarkusDev
 ```
+
+The development task creates or reuses a local kind cluster, deploys LittleHorse, and connects the
+agent to it at `localhost:2023`. Packaged JVM and native artifacts can be built and run through the
+scripts in `local-dev`. See [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands,
+build options, and smoke-test instructions.
 
 The configured GitHub MCP client is disabled by default in dev mode so the application can start
 without GitHub credentials. To enable it, provide both settings before starting Quarkus:
