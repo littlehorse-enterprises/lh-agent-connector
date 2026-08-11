@@ -11,3 +11,8 @@ pluginManagement {
 }
 
 rootProject.name = 'lh-agent-connector'
+
+file('examples').listFiles().findAll { it.isDirectory() }.each {
+    include("example-${it.name}")
+    project(":example-${it.name}").projectDir = it
+}

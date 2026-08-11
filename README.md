@@ -77,8 +77,10 @@ export AGENT_CHAT_MODEL_OPENAI_MODEL=...
 ```
 
 Custom endpoints can optionally be configured with `AGENT_CHAT_MODEL_ANTHROPIC_BASE_URL` or
-`AGENT_CHAT_MODEL_OPENAI_BASE_URL`. Only the selected provider's configuration is required. The
-provider is read when the application starts, so switching it requires a restart but not a rebuild.
+`AGENT_CHAT_MODEL_OPENAI_BASE_URL`. Configure the OpenAI response timeout with
+`AGENT_CHAT_MODEL_OPENAI_TIMEOUT` when a local or remote model can take longer than the default.
+Only the selected provider's configuration is required. The provider is read when the application
+starts, so switching it requires a restart but not a rebuild.
 
 An optional system message can be supplied through Quarkus configuration. When present, it is
 checkpointed and sent as the first message in every new agent conversation:
@@ -201,18 +203,24 @@ Export the selected model's credentials, then run the application in Quarkus dev
 ./gradlew quarkusDev
 ```
 
-The development task creates or reuses a local kind cluster, deploys LittleHorse, and connects the
-agent to it at `localhost:2023`. Packaged JVM and native artifacts can be built and run through the
-scripts in `local-dev`. See [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands,
-build options, and smoke-test instructions.
+For local development, provision LittleHorse and Ollama with `./local-dev/setup.sh` before starting
+Quarkus. Packaged JVM and native artifacts can be built and run through the scripts in `local-dev`.
+See [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands, build options, and
+smoke-test instructions.
 
-The configured GitHub MCP client is disabled by default in dev mode so the application can start
-without GitHub credentials. To enable it, provide both settings before starting Quarkus:
+## Examples
+
+Standalone Quarkus applications for the four agent input/output combinations live under
+[`examples/`](examples/README.md). The first available example runs a text-to-text workflow against
+the local Ollama `qwen3:4b` model:
 
 ```shell
-export GITHUB_MCP_ENABLED=true
-export GITHUB_MCP_TOKEN=...
+./local-dev/setup.sh
+./gradlew :example-text-to-text:quarkusDev
 ```
+
+See the [text-to-text example](examples/text-to-text/README.md) for its workflow invocation and
+output-inspection instructions.
 
 ## Test and build
 

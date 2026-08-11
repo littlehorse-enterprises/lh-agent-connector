@@ -13,6 +13,7 @@ import jakarta.inject.Inject;
 
 import org.junit.jupiter.api.Test;
 
+import java.time.Duration;
 import java.util.Map;
 
 @QuarkusTest
@@ -31,6 +32,7 @@ class OpenAiChatModelConfigurationTest {
         assertThat(openAi.apiKey()).isEqualTo("test-openai-api-key");
         assertThat(openAi.baseUrl()).contains("https://openai.example.test/v1");
         assertThat(openAi.model()).isEqualTo("test-openai-model");
+        assertThat(openAi.timeout()).contains(Duration.ofMinutes(4));
         assertThat(chatModel).isInstanceOf(OpenAiChatModel.class);
     }
 
@@ -42,7 +44,8 @@ class OpenAiChatModelConfigurationTest {
                     "agent.chat-model.provider", "openai",
                     "agent.chat-model.openai.api-key", "test-openai-api-key",
                     "agent.chat-model.openai.base-url", "https://openai.example.test/v1",
-                    "agent.chat-model.openai.model", "test-openai-model");
+                    "agent.chat-model.openai.model", "test-openai-model",
+                    "agent.chat-model.openai.timeout", "PT4M");
         }
     }
 }

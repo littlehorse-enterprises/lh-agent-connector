@@ -91,11 +91,12 @@ agent inside Kubernetes.
 For live coding, invoke Quarkus directly:
 
 ```shell
+./local-dev/setup.sh
 ./gradlew quarkusDev
 ```
 
-The packaged-artifact wrapper invokes `local-dev/setup.sh`, while `quarkusDev` runs the
-`localDevSetup` Gradle task first. Both paths are idempotent: subsequent runs reuse the
+The packaged-artifact wrapper invokes `local-dev/setup.sh`. When running `quarkusDev` directly,
+provision the environment first as shown above. Setup is idempotent: subsequent runs reuse the
 `lh-agent-connector` kind cluster and reapply the LittleHorse manifests.
 
 When startup completes, the local services are available at:
@@ -111,15 +112,22 @@ Kubernetes.
 
 ## Test the agent
 
-Quarkus development mode registers an `agent-example` WfSpec when the agent uses its default text
-input and text output. Start a run with:
+The text-to-text example registers the connector's task and a `text-to-text-example` WfSpec. Start
+the example and leave it running:
 
 ```shell
-lhctl run agent-example input "Explain LittleHorse in one sentence"
+./gradlew :example-text-to-text:quarkusDev
 ```
 
-Inspect the resulting WfRun in the dashboard or with `lhctl`. The workflow output variable contains
-the model response.
+In another terminal, start a run:
+
+```shell
+lhctl run text-to-text-example input "Explain LittleHorse in one sentence"
+```
+
+Inspect the resulting WfRun in the dashboard or with `lhctl`. The workflow reaches `COMPLETED`, and
+its `output` variable contains the model response. See
+[examples/text-to-text/README.md](examples/text-to-text/README.md) for the full example walkthrough.
 
 ## Manage the cluster
 

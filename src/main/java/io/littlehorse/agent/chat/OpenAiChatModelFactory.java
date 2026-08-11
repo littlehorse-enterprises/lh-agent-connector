@@ -13,6 +13,7 @@ public class OpenAiChatModelFactory {
         return OpenAiChatModel.builder()
                 .apiKey(configuration.apiKey())
                 .modelName(configuration.model())
+                .timeout(configuration.timeout().orElse(null))
                 .maxRetries(configuration.maxRetries().orElse(2))
                 .organizationId(configuration.organizationId().orElse(null))
                 .projectId(configuration.projectId().orElse(null))

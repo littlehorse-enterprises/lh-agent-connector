@@ -6,6 +6,7 @@ import io.quarkus.runtime.annotations.ConfigGroup;
 
 import jakarta.validation.constraints.NotBlank;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.Optional;
 
@@ -20,6 +21,9 @@ public interface OpenAiChatModelConfiguration {
 
     @NotBlank(message = "must be configured")
     String model();
+
+    /** Maximum duration to wait for a model response. */
+    Optional<Duration> timeout();
 
     /**
      * The maximum number of times to retry. 1 means exactly one attempt, with retrying disabled.
