@@ -1,9 +1,9 @@
 # Development
 
-The local development environment runs the agent on the host and LittleHorse and Ollama in a
-dedicated kind cluster. Both supported launch commands create or reuse that cluster, wait for its
-services to become ready, and then start the agent in Quarkus development mode. The setup installs
-`qwen3:4b` in Ollama and retains it in a persistent volume between setup runs.
+The local development environment runs the agent and Ollama on the host and LittleHorse in a
+dedicated kind cluster. Both supported launch commands create or reuse that cluster, wait for
+LittleHorse to become ready, ensure the configured model is available in local Ollama, and then
+start the agent in Quarkus development mode.
 
 ## Prerequisites
 
@@ -14,6 +14,17 @@ Install the following tools:
 - kubectl
 - kubectx
 - Java 25
+- Ollama installed with Homebrew
+
+Install Ollama before running the local setup:
+
+```shell
+brew install ollama
+```
+
+`local-dev/setup.sh` validates the `ollama` command and the API at `localhost:11434`. If Ollama is
+installed but stopped, setup starts it with `brew services start ollama` and waits up to 30 seconds
+for its API. Setup never installs Ollama.
 
 The setup exports the kind context to the default kubeconfig, selects `kind-lh-agent-connector` with
 `kubectx`, and sets its default namespace to `littlehorse`. Use `kubectx -` after setup if you want
@@ -44,8 +55,8 @@ export AGENT_CHAT_MODEL_OPENAI_MODEL=qwen3:4b
 export AGENT_CHAT_MODEL_OPENAI_BASE_URL=http://localhost:11434/v1
 ```
 
-Set `OLLAMA_MODEL` before running setup to install a different model. Use the same model name in
-`AGENT_CHAT_MODEL_OPENAI_MODEL` when starting the agent.
+Set `OLLAMA_MODEL` before running setup to pull a different model into local Ollama. Use the same
+model name in `AGENT_CHAT_MODEL_OPENAI_MODEL` when starting the agent.
 
 Do not commit credentials to an application properties file. Quarkus maps these environment
 variables to the corresponding `agent.*` properties.
@@ -106,9 +117,8 @@ When startup completes, the local services are available at:
 - Ollama API: [http://localhost:11434](http://localhost:11434)
 - Ollama OpenAI-compatible API: `http://localhost:11434/v1`
 
-The cluster-side `littlehorse` service exposes the internal listener on port `2024`, and the
-cluster-side `ollama` service exposes its API on port `11434` for workloads running inside
-Kubernetes.
+The cluster-side `littlehorse` service exposes the internal listener on port `2024`. Ollama is not
+deployed in Kubernetes; host-run applications access its local API at port `11434`.
 
 ## Test the agent
 
@@ -131,7 +141,8 @@ its `output` variable contains the model response. See
 
 ## Manage the cluster
 
-Provision LittleHorse and Ollama without starting Quarkus:
+Provision LittleHorse and ensure the configured model is available in the already-running local
+Ollama service, without starting Quarkus:
 
 ```shell
 ./local-dev/setup.sh
@@ -141,6 +152,13 @@ Delete the dedicated cluster:
 
 ```shell
 ./local-dev/setup.sh --clean
+```
+
+Ordinary cleanup leaves the host-level Ollama service running because other projects may use it.
+Stop Ollama explicitly while deleting the cluster with:
+
+```shell
+./local-dev/setup.sh --clean --stop-ollama
 ```
 
 If port `2023` or `8080` is already in use, stop the conflicting process and recreate the cluster.

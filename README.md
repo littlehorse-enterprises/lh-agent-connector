@@ -203,9 +203,11 @@ Export the selected model's credentials, then run the application in Quarkus dev
 ./gradlew quarkusDev
 ```
 
-For local development, provision LittleHorse and Ollama with `./local-dev/setup.sh` before starting
-Quarkus. Packaged JVM and native artifacts can be built and run through the scripts in `local-dev`.
-See [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands, build options, and
+For local development, install Ollama separately, then provision LittleHorse with
+`./local-dev/setup.sh` before starting Quarkus. The setup script starts an installed Ollama service
+when needed and pulls the configured model, but never installs Ollama. Packaged JVM and native
+artifacts can be built and run through the scripts in `local-dev`. See
+[DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands, build options, and
 smoke-test instructions.
 
 ## Examples

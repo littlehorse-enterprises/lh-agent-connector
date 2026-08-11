@@ -10,20 +10,27 @@ input (STR) -> text-to-text-agent -> output (STR)
 
 The example uses Ollama's OpenAI-compatible API and the `qwen3:4b` model. Its complete agent
 configuration is in `src/main/resources/application.properties`; no API credentials are required.
-The model response timeout is four minutes, with connector retries disabled, so one cold inference
+The model response timeout is four minutes, with connector retries disabled, so local inference
 stays within the workflow's five-minute task timeout.
 
 ## Setup
 
-From the repository root, create the local kind cluster and install LittleHorse, Ollama, and the
-model:
+Install Ollama before running the example:
+
+```shell
+brew install ollama
+```
+
+From the repository root, create the local kind cluster, install LittleHorse, and ensure the
+`qwen3:4b` model is available in local Ollama:
 
 ```shell
 ./local-dev/setup.sh
 ```
 
-The setup is idempotent. It exposes LittleHorse at `localhost:2023`, the dashboard at
-[http://localhost:8080](http://localhost:8080), and Ollama at `localhost:11434`.
+The setup is idempotent. It starts an installed Ollama service when necessary and validates it at
+`localhost:11434`, but never installs Ollama. LittleHorse is exposed at `localhost:2023`, and its
+dashboard is available at [http://localhost:8080](http://localhost:8080).
 
 ## Run
 
@@ -35,8 +42,7 @@ Start the Quarkus application and leave it running:
 
 The application registers the `text-to-text-agent` TaskDef, starts its worker, and registers the
 `text-to-text-example` WfSpec. The workflow allows five minutes for the agent task because the first
-local model invocation can be slower while Ollama warms the model. In another terminal, start a
-workflow run:
+local model invocation can take longer. In another terminal, start a workflow run:
 
 ```shell
 lhctl run text-to-text-example input "Explain LittleHorse in one sentence"
@@ -57,4 +63,10 @@ Stop Quarkus, then delete the dedicated local cluster when it is no longer neede
 
 ```shell
 ./local-dev/setup.sh --clean
+```
+
+This leaves the host-level Ollama service running. To stop it explicitly during cleanup:
+
+```shell
+./local-dev/setup.sh --clean --stop-ollama
 ```
