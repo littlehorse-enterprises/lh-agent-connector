@@ -1,8 +1,9 @@
 # Development
 
-The local development environment runs the agent on the host and LittleHorse in a dedicated kind
-cluster. Both supported launch commands create or reuse that cluster, wait for LittleHorse to
-become ready, and then start the agent in Quarkus development mode.
+The local development environment runs the agent on the host and LittleHorse and Ollama in a
+dedicated kind cluster. Both supported launch commands create or reuse that cluster, wait for its
+services to become ready, and then start the agent in Quarkus development mode. The setup installs
+`qwen3:4b` in Ollama and retains it in a persistent volume between setup runs.
 
 ## Prerequisites
 
@@ -33,6 +34,18 @@ export AGENT_CHAT_MODEL_PROVIDER=anthropic
 export AGENT_CHAT_MODEL_ANTHROPIC_API_KEY=...
 export AGENT_CHAT_MODEL_ANTHROPIC_MODEL=...
 ```
+
+To use the local Ollama model through its OpenAI-compatible API:
+
+```shell
+export AGENT_CHAT_MODEL_PROVIDER=openai
+export AGENT_CHAT_MODEL_OPENAI_API_KEY=ollama
+export AGENT_CHAT_MODEL_OPENAI_MODEL=qwen3:4b
+export AGENT_CHAT_MODEL_OPENAI_BASE_URL=http://localhost:11434/v1
+```
+
+Set `OLLAMA_MODEL` before running setup to install a different model. Use the same model name in
+`AGENT_CHAT_MODEL_OPENAI_MODEL` when starting the agent.
 
 Do not commit credentials to an application properties file. Quarkus maps these environment
 variables to the corresponding `agent.*` properties.
@@ -89,9 +102,12 @@ When startup completes, the local services are available at:
 
 - LittleHorse API: `localhost:2023`
 - LittleHorse dashboard: [http://localhost:8080](http://localhost:8080)
+- Ollama API: [http://localhost:11434](http://localhost:11434)
+- Ollama OpenAI-compatible API: `http://localhost:11434/v1`
 
-The cluster-side `littlehorse` service also exposes the internal listener on port `2024` for
-workloads running inside Kubernetes.
+The cluster-side `littlehorse` service exposes the internal listener on port `2024`, and the
+cluster-side `ollama` service exposes its API on port `11434` for workloads running inside
+Kubernetes.
 
 ## Test the agent
 
@@ -107,7 +123,7 @@ the model response.
 
 ## Manage the cluster
 
-Provision LittleHorse without starting Quarkus:
+Provision LittleHorse and Ollama without starting Quarkus:
 
 ```shell
 ./local-dev/setup.sh
