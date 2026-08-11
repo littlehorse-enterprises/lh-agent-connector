@@ -1,0 +1,17 @@
+services:
+  littlehorse:
+    image: "ghcr.io/littlehorse-enterprises/littlehorse/lh-standalone:${LH_VERSION:?LH_VERSION must be set from gradle.properties}"
+    restart: on-failure
+    environment:
+      LHS_LISTENERS: EXTERNAL:2023,INTERNAL:2024
+      LHS_LISTENERS_PROTOCOL_MAP: EXTERNAL:PLAIN,INTERNAL:PLAIN
+      LHS_ADVERTISED_LISTENERS: EXTERNAL://localhost:2023,INTERNAL://littlehorse:2024
+    ports:
+      - "127.0.0.1:2023:2023"
+      - "127.0.0.1:8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:1822/readiness"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 10s

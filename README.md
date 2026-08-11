@@ -205,8 +205,10 @@ Export the selected model's credentials, then run the application in Quarkus dev
 
 For local development, install Ollama separately, then provision LittleHorse with
 `./local-dev/setup.sh` before starting Quarkus. The setup script starts an installed Ollama service
-when needed and pulls the configured model, but never installs Ollama. Packaged JVM and native
-artifacts can be built and run through the scripts in `local-dev`. See
+when needed, pulls the configured model, and runs LittleHorse through Docker Compose, but never
+installs Ollama. Optionally run `./local-dev/setup.sh --lhctl` to back up and configure
+`~/.config/littlehorse.config` for the local server. Packaged JVM and native artifacts can be built
+and run through the scripts in `local-dev`. See
 [DEVELOPMENT.md](DEVELOPMENT.md) for prerequisites, lifecycle commands, build options, and
 smoke-test instructions.
 

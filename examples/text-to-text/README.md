@@ -33,8 +33,8 @@ Install Ollama before running the example:
 brew install ollama
 ```
 
-From the repository root, create the local kind cluster, install LittleHorse, and ensure the
-`qwen3:4b` model is available in local Ollama:
+From the repository root, start LittleHorse with Docker Compose and ensure the `qwen3:4b` model is
+available in local Ollama:
 
 ```shell
 ./local-dev/setup.sh
@@ -43,6 +43,13 @@ From the repository root, create the local kind cluster, install LittleHorse, an
 The setup is idempotent. It starts an installed Ollama service when necessary and validates it at
 `localhost:11434`, but never installs Ollama. LittleHorse is exposed at `localhost:2023`, and its
 dashboard is available at [http://localhost:8080](http://localhost:8080).
+
+Optionally back up and configure `~/.config/littlehorse.config` for the local server before using
+`lhctl`:
+
+```shell
+./local-dev/setup.sh --lhctl
+```
 
 ## Run
 
@@ -98,13 +105,14 @@ lhctl get variable <wf-run-id> 0 output
 
 ## Cleanup
 
-Stop Quarkus, then delete the dedicated local cluster when it is no longer needed:
+Stop Quarkus, then stop LittleHorse and delete its local Compose data when it is no longer needed:
 
 ```shell
 ./local-dev/setup.sh --clean
 ```
 
-This leaves the host-level Ollama service running. To stop it explicitly during cleanup:
+This permanently removes local LittleHorse workflow definitions and run history, but leaves the
+host-level Ollama service running. To stop Ollama explicitly during cleanup:
 
 ```shell
 ./local-dev/setup.sh --clean --stop-ollama

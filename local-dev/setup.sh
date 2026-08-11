@@ -2,16 +2,23 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
-CLUSTER_NAME="lh-agent-connector"
+PROJECT_DIR=$(cd "${SCRIPT_DIR}/.." && pwd)
+COMPOSE_FILE="${SCRIPT_DIR}/compose.yaml"
+COMPOSE_PROJECT_NAME="lh-agent-connector"
+GRADLE_PROPERTIES="${PROJECT_DIR}/gradle.properties"
 OLLAMA_MODEL="${OLLAMA_MODEL:-qwen3:4b}"
 
 clean=false
+configure_lhctl=false
 stop_ollama=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --clean)
       clean=true
+      ;;
+    --lhctl)
+      configure_lhctl=true
       ;;
     --stop-ollama)
       stop_ollama=true
@@ -24,18 +31,60 @@ while [[ $# -gt 0 ]]; do
   shift
 done
 
+if [[ "${configure_lhctl}" == "true" && ("${clean}" == "true" || "${stop_ollama}" == "true") ]]; then
+  echo "--lhctl cannot be combined with --clean or --stop-ollama." >&2
+  exit 1
+fi
+
 if [[ "${stop_ollama}" == "true" && "${clean}" != "true" ]]; then
   echo "--stop-ollama must be used with --clean." >&2
   exit 1
 fi
 
-if ! command -v kind >/dev/null 2>&1; then
-  echo "'kind' command not found. Install https://kind.sigs.k8s.io/." >&2
+if [[ "${configure_lhctl}" == "true" ]]; then
+  lhctl_config_dir="${HOME}/.config"
+  lhctl_config_file="${lhctl_config_dir}/littlehorse.config"
+
+  mkdir -p "${lhctl_config_dir}"
+  if [[ -f "${lhctl_config_file}" ]]; then
+    cp "${lhctl_config_file}" "${lhctl_config_file}.backup"
+    echo "Backed up existing littlehorse.config to ${lhctl_config_file}.backup."
+  fi
+
+  cat >"${lhctl_config_file}" <<EOF
+LHC_API_HOST=localhost
+LHC_API_PORT=2023
+EOF
+
+  echo "Configured lhctl with ${lhctl_config_file}."
+  exit 0
+fi
+
+if [[ ! -f "${GRADLE_PROPERTIES}" ]]; then
+  echo "Gradle properties file not found: ${GRADLE_PROPERTIES}" >&2
   exit 1
 fi
 
-if ! command -v kubectx >/dev/null 2>&1; then
-  echo "'kubectx' command not found. Install https://kubectx.org/." >&2
+LITTLEHORSE_VERSION=$(sed -n 's/^version=//p' "${GRADLE_PROPERTIES}")
+if [[ -z "${LITTLEHORSE_VERSION}" || "${LITTLEHORSE_VERSION}" == *$'\n'* ]]; then
+  echo "Expected exactly one non-empty version property in ${GRADLE_PROPERTIES}." >&2
+  exit 1
+fi
+
+run_compose() {
+  LH_VERSION="${LITTLEHORSE_VERSION}" docker compose \
+    --project-name "${COMPOSE_PROJECT_NAME}" \
+    --file "${COMPOSE_FILE}" \
+    "$@"
+}
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "'docker' command not found. Install https://docs.docker.com/engine/install/." >&2
+  exit 1
+fi
+
+if ! docker compose version >/dev/null 2>&1; then
+  echo "The Docker Compose plugin is not available. Install https://docs.docker.com/compose/install/." >&2
   exit 1
 fi
 
@@ -45,23 +94,13 @@ if [[ "${clean}" == "true" ]]; then
     exit 1
   fi
 
-  kind delete cluster --name "${CLUSTER_NAME}"
+  run_compose down --volumes --remove-orphans
 
   if [[ "${stop_ollama}" == "true" ]]; then
     brew services stop ollama
   fi
 
   exit 0
-fi
-
-if ! command -v docker >/dev/null 2>&1; then
-  echo "'docker' command not found. Install https://docs.docker.com/engine/install/." >&2
-  exit 1
-fi
-
-if ! command -v kubectl >/dev/null 2>&1; then
-  echo "'kubectl' command not found. Install https://kubernetes.io/docs/tasks/tools/." >&2
-  exit 1
 fi
 
 if ! command -v ollama >/dev/null 2>&1; then
@@ -101,14 +140,7 @@ if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/nul
   fi
 fi
 
-kind create cluster --name "${CLUSTER_NAME}" --config "${SCRIPT_DIR}/kind.yaml" -q || true
-
-kubectx "kind-${CLUSTER_NAME}"
-
-kubectl apply -f "${SCRIPT_DIR}/namespace.yaml"
-kubectl config set-context --current --namespace=littlehorse
-kubectl apply -f "${SCRIPT_DIR}/littlehorse.yaml"
-kubectl rollout status deployment/littlehorse --namespace littlehorse --timeout=5m
+run_compose up --detach --wait --wait-timeout 300
 
 if ! ollama show "${OLLAMA_MODEL}" >/dev/null 2>&1; then
   echo "Downloading local Ollama model ${OLLAMA_MODEL}."

@@ -1,18 +1,16 @@
 # Development
 
-The local development environment runs the agent and Ollama on the host and LittleHorse in a
-dedicated kind cluster. Both supported launch commands create or reuse that cluster, wait for
-LittleHorse to become ready, ensure the configured model is available in local Ollama, and then
-start the agent in Quarkus development mode.
+The local development environment runs the agent and Ollama on the host and LittleHorse in Docker
+Compose. The setup command creates or reuses the Compose environment, waits for LittleHorse to
+become ready, and ensures the configured model is available in local Ollama. Start the agent
+separately in Quarkus development mode or from a packaged artifact.
 
 ## Prerequisites
 
 Install the following tools:
 
 - Docker
-- kind
-- kubectl
-- kubectx
+- Docker Compose plugin
 - Java 25
 - Ollama installed with Homebrew
 
@@ -26,9 +24,9 @@ brew install ollama
 installed but stopped, setup starts it with `brew services start ollama` and waits up to 30 seconds
 for its API. Setup never installs Ollama.
 
-The setup exports the kind context to the default kubeconfig, selects `kind-lh-agent-connector` with
-`kubectx`, and sets its default namespace to `littlehorse`. Use `kubectx -` after setup if you want
-to return to the previously selected Kubernetes context.
+The Compose environment binds the LittleHorse API and dashboard to the loopback interface, so it
+does not change Kubernetes contexts or expose the services on other network interfaces.
+The LittleHorse standalone image tag comes from the root `gradle.properties` `version` property.
 
 The agent also needs credentials for one supported chat-model provider. For OpenAI:
 
@@ -81,9 +79,8 @@ Run the previously built native executable:
 ./local-dev/run.sh --native
 ```
 
-The native build is a Linux executable. On Linux, the script runs `build/quarkus-run` directly. On
-macOS, it runs the native executable from `littlehorse/lh-agent-connector:latest` with Docker host
-networking so it can reach the kind listener at `localhost:2023`.
+The native build is a Linux executable, and the native run command is intended for Linux. The
+container image is also tagged as `littlehorse/lh-agent-connector:latest` for container-based use.
 
 Build everything and then run the native executable:
 
@@ -92,8 +89,8 @@ Build everything and then run the native executable:
 ```
 
 The build can also be run independently. It creates the Quarkus JVM and native artifacts and tags
-the container image as `littlehorse/lh-agent-connector:latest`; it does not install or roll out the
-agent inside Kubernetes.
+the container image as `littlehorse/lh-agent-connector:latest`; it does not add the agent to the
+local Compose environment.
 
 ```shell
 ./local-dev/build.sh
@@ -106,9 +103,8 @@ For live coding, invoke Quarkus directly:
 ./gradlew quarkusDev
 ```
 
-The packaged-artifact wrapper invokes `local-dev/setup.sh`. When running `quarkusDev` directly,
-provision the environment first as shown above. Setup is idempotent: subsequent runs reuse the
-`lh-agent-connector` kind cluster and reapply the LittleHorse manifests.
+Run `local-dev/setup.sh` before either packaged artifacts or `quarkusDev`. Setup is idempotent:
+subsequent runs reuse the `lh-agent-connector` Compose project and its LittleHorse data volume.
 
 When startup completes, the local services are available at:
 
@@ -117,8 +113,8 @@ When startup completes, the local services are available at:
 - Ollama API: [http://localhost:11434](http://localhost:11434)
 - Ollama OpenAI-compatible API: `http://localhost:11434/v1`
 
-The cluster-side `littlehorse` service exposes the internal listener on port `2024`. Ollama is not
-deployed in Kubernetes; host-run applications access its local API at port `11434`.
+The Compose-side `littlehorse` service exposes the internal listener on port `2024`. Ollama is not
+deployed in Compose; host-run applications access its local API at port `11434`.
 
 ## Test the agent
 
@@ -139,34 +135,43 @@ Inspect the resulting WfRun in the dashboard or with `lhctl`. The workflow reach
 its `output` variable contains the model response. See
 [examples/text-to-text/README.md](examples/text-to-text/README.md) for the full example walkthrough.
 
-## Manage the cluster
+## Manage the local environment
 
-Provision LittleHorse and ensure the configured model is available in the already-running local
-Ollama service, without starting Quarkus:
+Provision LittleHorse and ensure the configured model is available in local Ollama, without
+starting Quarkus:
 
 ```shell
 ./local-dev/setup.sh
 ```
 
-Delete the dedicated cluster:
+Stop LittleHorse and delete its Compose network and data volume:
 
 ```shell
 ./local-dev/setup.sh --clean
 ```
 
-Ordinary cleanup leaves the host-level Ollama service running because other projects may use it.
-Stop Ollama explicitly while deleting the cluster with:
+Cleanup permanently removes local LittleHorse workflow definitions and run history. Ordinary
+cleanup leaves the host-level Ollama service running because other projects may use it. Stop Ollama
+explicitly with:
 
 ```shell
 ./local-dev/setup.sh --clean --stop-ollama
 ```
 
-If port `2023` or `8080` is already in use, stop the conflicting process and recreate the cluster.
-The kind host-port mappings are fixed when the cluster is created, so changes to
-`local-dev/kind.yaml` also require deleting and recreating the cluster.
+If port `2023` or `8080` is already in use, stop the conflicting process before running setup.
 
-To run Quarkus against a different LittleHorse environment without invoking kind, skip the setup
-task and provide the desired LittleHorse configuration:
+Optionally configure `lhctl` to use this local LittleHorse server:
+
+```shell
+./local-dev/setup.sh --lhctl
+```
+
+This standalone command creates `~/.config` when needed. If `littlehorse.config` already exists, it
+is copied to `littlehorse.config.backup` before the command writes `localhost:2023` as the active
+LittleHorse endpoint.
+
+To run Quarkus against a different LittleHorse environment without invoking the local Compose
+setup, provide the desired LittleHorse configuration:
 
 ```shell
 export LHC_API_HOST=example.littlehorse.internal
@@ -187,4 +192,6 @@ Validate the local shell scripts without executing them:
 
 ```shell
 bash -n local-dev/build.sh local-dev/setup.sh local-dev/run.sh
+LH_VERSION="$(sed -n 's/^version=//p' gradle.properties)" \
+  docker compose --file local-dev/compose.yaml config --quiet
 ```
