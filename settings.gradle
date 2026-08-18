@@ -5,8 +5,14 @@ pluginManagement {
         mavenLocal()
     }
     plugins {
-        id "io.quarkus" version "${quarkusVersion}"
         id "com.diffplug.spotless" version "${spotlessVersion}"
+        id "io.quarkus" version "${quarkusVersion}"
     }
 }
-rootProject.name='lh-agent-connector'
+
+rootProject.name = 'lh-agent-connector'
+
+file('examples').listFiles().findAll { it.isDirectory() }.each {
+    include("example-${it.name}")
+    project(":example-${it.name}").projectDir = it
+}

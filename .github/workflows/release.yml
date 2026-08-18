@@ -1,0 +1,69 @@
+name: release
+run-name: Release ${{ github.ref_name }}
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+  packages: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.release.outputs.tag }}
+      version: ${{ steps.release.outputs.version }}
+      pre-release: ${{ steps.release.outputs.pre-release }}
+    steps:
+      - name: Prepare release metadata
+        id: release
+        run: |
+          tag="$GITHUB_REF_NAME"
+          version="${tag#v}"
+
+          if [ "$tag" = "$version" ]; then
+            echo "Release tag must start with v: $tag" >&2
+            exit 1
+          fi
+
+          if [[ "$version" == *-* ]]; then
+            pre_release=true
+          else
+            pre_release=false
+          fi
+
+          {
+            echo "tag=$tag"
+            echo "version=$version"
+            echo "pre-release=$pre_release"
+          } >> "$GITHUB_OUTPUT"
+
+  tests:
+    needs: prepare
+    uses: ./.github/workflows/shared-tests.yaml
+    with:
+      upload-artifacts: true
+      version: ${{ needs.prepare.outputs.version }}
+
+  publish:
+    needs:
+      - prepare
+      - tests
+    uses: ./.github/workflows/shared-publish.yaml
+    secrets: inherit
+    with:
+      version: ${{ needs.prepare.outputs.version }}
+
+  release:
+    needs:
+      - prepare
+      - publish
+    uses: ./.github/workflows/shared-release.yml
+    secrets: inherit
+    with:
+      tag: ${{ needs.prepare.outputs.tag }}
+      version: ${{ needs.prepare.outputs.version }}
+      pre-release: ${{ needs.prepare.outputs.pre-release == 'true' }}
