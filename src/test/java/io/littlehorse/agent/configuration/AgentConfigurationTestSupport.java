@@ -1,5 +1,6 @@
 package io.littlehorse.agent.configuration;
 
+import io.smallrye.config.EnvConfigSource;
 import io.smallrye.config.SmallRyeConfigBuilder;
 import io.smallrye.config.common.MapBackedConfigSource;
 import io.smallrye.config.validator.BeanValidationConfigValidatorImpl;
@@ -21,6 +22,20 @@ final class AgentConfigurationTestSupport {
         Map<String, String> allProperties = new HashMap<>(VALID_CONFIGURATION);
         allProperties.putAll(properties);
         return buildExactConfiguration(allProperties);
+    }
+
+    static AgentConfiguration buildConfigurationWithEnvironment(
+            Map<String, String> properties, Map<String, String> environment) {
+        Map<String, String> allProperties = new HashMap<>(VALID_CONFIGURATION);
+        allProperties.putAll(properties);
+        return new SmallRyeConfigBuilder()
+                .withMapping(AgentConfiguration.class)
+                .withValidator(new BeanValidationConfigValidatorImpl())
+                .withSources(
+                        new MapBackedConfigSource("test", allProperties) {},
+                        new EnvConfigSource(environment, EnvConfigSource.ORDINAL))
+                .build()
+                .getConfigMapping(AgentConfiguration.class);
     }
 
     static AgentConfiguration buildExactConfiguration(Map<String, String> properties) {

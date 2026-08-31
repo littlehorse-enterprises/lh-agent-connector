@@ -44,8 +44,9 @@ class McpComponentsTest {
     @Test
     void mcpClientsCreatesOnlyEnabledClientsWithTheirAuthenticationSupplier() throws IOException {
         AtomicReference<String> authorization = new AtomicReference<>();
+        AtomicReference<String> configuredHeader = new AtomicReference<>();
         McpClientListener listener = mock(McpClientListener.class);
-        HttpServer server = mcpServer(authorization);
+        HttpServer server = mcpServer(authorization, configuredHeader, new AtomicReference<>());
         String url = "http://localhost:" + server.getAddress().getPort() + "/mcp";
         McpConfiguration configuration = new TestMcpConfiguration(Map.of(
                 "enabled", new TestClientConfiguration(true, url, allTools()),
@@ -62,9 +63,46 @@ class McpComponentsTest {
             assertThat(clients).containsOnlyKeys("enabled");
             assertThat(clients.get("enabled").key()).isEqualTo("enabled");
             assertThat(authorization).hasValue("Bearer test-token");
+            assertThat(configuredHeader).hasValue("configured-header");
             clients.get("enabled").listTools();
             verify(listener).beforeToolsList(any(McpCallContext.class));
             assertThatThrownBy(clients::clear).isInstanceOf(UnsupportedOperationException.class);
+        } finally {
+            clients.values().forEach(DefaultMcpClient::close);
+            server.stop(0);
+        }
+    }
+
+    @Test
+    void lastHeaderWithTheSameNameWins() throws IOException {
+        AtomicReference<String> configuredHeader = new AtomicReference<>();
+        HttpServer server =
+                mcpServer(new AtomicReference<>(), configuredHeader, new AtomicReference<>());
+        String url = "http://localhost:" + server.getAddress().getPort() + "/mcp";
+        McpConfiguration configuration = new TestMcpConfiguration(Map.of(
+                "duplicate-headers",
+                new TestClientConfiguration(
+                        true,
+                        url,
+                        allTools(),
+                        new TestAuthentication(
+                                McpConfiguration.AuthenticationType.NONE,
+                                Optional.empty(),
+                                Optional.empty()),
+                        List.of(
+                                new TestHeader("X-Test", "first"),
+                                new TestHeader("X-Test", "last")))));
+        Map<String, DefaultMcpClient> clients = Map.of();
+
+        try {
+            clients = mcpClientsProducer()
+                    .mcpClients(
+                            agentConfiguration(configuration),
+                            Map.of(),
+                            mock(McpClientListener.class));
+
+            clients.get("duplicate-headers").listTools();
+            assertThat(configuredHeader).hasValue("last");
         } finally {
             clients.values().forEach(DefaultMcpClient::close);
             server.stop(0);
@@ -76,7 +114,7 @@ class McpComponentsTest {
             throws IOException {
         AtomicReference<String> authorization = new AtomicReference<>();
         AtomicReference<String> executedTool = new AtomicReference<>();
-        HttpServer server = mcpServer(authorization, executedTool);
+        HttpServer server = mcpServer(authorization, new AtomicReference<>(), executedTool);
         String url = "http://localhost:" + server.getAddress().getPort() + "/mcp";
         McpConfiguration configuration = new TestMcpConfiguration(Map.of(
                 "all", new TestClientConfiguration(true, url, allTools()),
@@ -213,15 +251,19 @@ class McpComponentsTest {
     }
 
     private static HttpServer mcpServer(AtomicReference<String> authorization) throws IOException {
-        return mcpServer(authorization, new AtomicReference<>());
+        return mcpServer(authorization, new AtomicReference<>(), new AtomicReference<>());
     }
 
     private static HttpServer mcpServer(
-            AtomicReference<String> authorization, AtomicReference<String> executedTool)
+            AtomicReference<String> authorization,
+            AtomicReference<String> configuredHeader,
+            AtomicReference<String> executedTool)
             throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext(
-                "/mcp", exchange -> respondToMcpRequest(exchange, authorization, executedTool));
+                "/mcp",
+                exchange -> respondToMcpRequest(
+                        exchange, authorization, configuredHeader, executedTool));
         server.start();
         return server;
     }
@@ -229,9 +271,11 @@ class McpComponentsTest {
     private static void respondToMcpRequest(
             HttpExchange exchange,
             AtomicReference<String> authorization,
+            AtomicReference<String> configuredHeader,
             AtomicReference<String> executedTool)
             throws IOException {
         authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+        configuredHeader.set(exchange.getRequestHeaders().getFirst("X-Test"));
         String request = new String(exchange.getRequestBody().readAllBytes(), UTF_8);
         String id = requestId(request);
         String response;
@@ -268,6 +312,10 @@ class McpComponentsTest {
                 McpConfiguration.ToolMode.ALL, Optional.empty(), Optional.empty(), Map.of());
     }
 
+    private static List<McpConfiguration.Header> configuredHeaders() {
+        return List.of(new TestHeader("X-Test", "configured-header"));
+    }
+
     private static AgentConfiguration agentConfiguration(McpConfiguration mcpConfiguration) {
         AgentConfiguration agentConfiguration = mock(AgentConfiguration.class);
         when(agentConfiguration.mcp()).thenReturn(mcpConfiguration);
@@ -281,7 +329,8 @@ class McpComponentsTest {
             boolean enabled,
             String url,
             McpConfiguration.Tools tools,
-            McpConfiguration.Authentication auth)
+            McpConfiguration.Authentication auth,
+            List<McpConfiguration.Header> headers)
             implements McpConfiguration.Client {
 
         private TestClientConfiguration(boolean enabled, String url, McpConfiguration.Tools tools) {
@@ -292,17 +341,21 @@ class McpComponentsTest {
                     new TestAuthentication(
                             McpConfiguration.AuthenticationType.BEARER,
                             Optional.of("test-token"),
-                            Optional.empty()));
+                            Optional.empty()),
+                    configuredHeaders());
+        }
+
+        private TestClientConfiguration(
+                boolean enabled,
+                String url,
+                McpConfiguration.Tools tools,
+                McpConfiguration.Authentication auth) {
+            this(enabled, url, tools, auth, configuredHeaders());
         }
 
         @Override
         public McpConfiguration.Transport transport() {
             return McpConfiguration.Transport.STREAMABLE_HTTP;
-        }
-
-        @Override
-        public Map<String, String> headers() {
-            return Map.of("x-test", "configured-header");
         }
 
         @Override
@@ -347,6 +400,8 @@ class McpComponentsTest {
             Optional<String> namePrefix,
             Map<String, McpConfiguration.SpecificationMapping> specificationMapping)
             implements McpConfiguration.Tools {}
+
+    private record TestHeader(String name, String value) implements McpConfiguration.Header {}
 
     private record TestSpecificationMapping(Optional<String> name, Optional<String> description)
             implements McpConfiguration.SpecificationMapping {}

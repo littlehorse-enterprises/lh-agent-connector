@@ -23,6 +23,7 @@ otherwise, validations are enforced when the application starts.
 
 | Configuration | Description | Type | Required | Validations | Default |
 | --- | --- | --- | --- | --- | --- |
+| `agent.max-tool-rounds` | Maximum number of model-response iterations in an agent execution, including the final response iteration. | Integer | No | Must be greater than zero. | `10` |
 | `agent.system-message` | System instruction sent as the first message in every new agent conversation. | String | No | Must not be blank when set. | |
 | `agent.user-message-template` | Handlebars template used to render structured task input into a user message. The input struct is available under the `struct` root. | String | When `agent.task.input.type` is `STRUCT` | Must not be blank when set. | |
 
@@ -100,6 +101,10 @@ application restart.
 MCP clients are configured under `agent.mcp.clients.<client-name>`. Replace `<client-name>` with a
 unique, nonblank map key. Quote keys containing characters that have special meaning in Quarkus
 configuration, for example `agent.mcp.clients."github.com".url`.
+For environment-only configuration, use lowercase client names containing only ASCII letters and
+digits so SmallRye Config can reconstruct the dynamic map key without punctuation or case
+ambiguity. Other client names remain supported when their exact dotted names are declared in a
+properties file.
 
 ### Client
 
@@ -108,7 +113,8 @@ configuration, for example `agent.mcp.clients."github.com".url`.
 | `agent.mcp.clients.<client-name>.enabled` | Enables creation and connection of this MCP client. | Boolean | No | The client name must not be blank. The value must be a valid boolean. | `true` |
 | `agent.mcp.clients.<client-name>.transport` | Transport used to connect to the MCP server. | Enum: `streamable-http`, `sse`, `websocket` | No | Must be a supported enum value. | `streamable-http` |
 | `agent.mcp.clients.<client-name>.url` | HTTP(S) or WebSocket endpoint of the MCP server. | String | For each configured client | Must not be blank. Must start with `http://`, `https://`, `ws://`, or `wss://` and contain no whitespace. | |
-| `agent.mcp.clients.<client-name>.headers.<header-name>` | Static header added to requests. Replace `<header-name>` with the header key. | Map entry: string to string | No | Header names and values must not be blank. `Authorization` cannot be set when authentication type is `bearer` or `oauth2`. | No headers |
+| `agent.mcp.clients.<client-name>.headers[<index>].name` | Name of an indexed static header added to requests. | String | For each configured header | Must not be blank. `Authorization` cannot be set when authentication type is `bearer` or `oauth2`. | |
+| `agent.mcp.clients.<client-name>.headers[<index>].value` | Value of an indexed static header added to requests. | String | For each configured header | Must not be blank. | |
 | `agent.mcp.clients.<client-name>.timeout` | Timeout used by the selected MCP transport. | Duration | No | Must be a valid, nonnegative duration. | `30s` |
 | `agent.mcp.clients.<client-name>.initialization-timeout` | Maximum duration allowed for MCP client initialization. | Duration | No | Must be a valid, nonnegative duration. | `30s` |
 | `agent.mcp.clients.<client-name>.tool-execution-timeout` | Maximum duration allowed for one MCP tool execution. | Duration | No | Must be a valid, nonnegative duration. | `60s` |
@@ -119,6 +125,24 @@ configuration, for example `agent.mcp.clients."github.com".url`.
 
 When no clients are configured, the MCP client map is empty. A client configured with
 `enabled=false` remains in the configuration but is not connected or exposed to the agent.
+
+Headers use indexed name/value entries so names containing punctuation can be supplied as values,
+including through environment variables:
+
+```properties
+agent.mcp.clients.github.headers[0].name=X-API-Key
+agent.mcp.clients.github.headers[0].value=${GITHUB_MCP_API_KEY}
+```
+
+```shell
+export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__NAME=X-API-Key
+export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__VALUE=secret
+```
+
+The previous `headers.<header-name>=<value>` map syntax is not supported. Header entries are
+processed in index order; when the same case-sensitive name is repeated, the last entry wins.
+HTTP treats header names case-insensitively. For the SSE transport, enabling `log-requests` logs
+request headers and can expose configured header values or authentication credentials.
 
 ### Authentication
 

@@ -32,6 +32,7 @@ dependencies {
     implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
     implementation "io.quarkus:quarkus-arc"
     implementation "io.quarkus:quarkus-hibernate-validator"
+    implementation "io.quarkus:quarkus-smallrye-health"
     implementation "io.quarkus:quarkus-oidc-client"
     implementation "io.quarkus:quarkus-logging-json"
 

@@ -1,5 +1,7 @@
 package io.littlehorse.agent.configuration;
 
+import static io.littlehorse.agent.configuration.AgentConfigurationTestSupport.buildConfigurationWithEnvironment;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 import dev.langchain4j.mcp.client.DefaultMcpClient;
@@ -39,7 +41,13 @@ class McpConfigurationTest {
         assertThat(client.auth().type()).isEqualTo(McpConfiguration.AuthenticationType.OAUTH2);
         assertThat(client.auth().oidcClient()).contains("test-oauth");
         assertThat(client.auth().token()).isEmpty();
-        assertThat(client.headers()).containsEntry("x-test", "test-header");
+        assertThat(client.headers())
+                .extracting(McpConfiguration.Header::name)
+                .containsExactly("X-Test", "X-API-Key");
+        assertThat(client.headers())
+                .extracting(McpConfiguration.Header::value)
+                .containsExactly("test-header", "test-api-key");
+        assertThat(configuration.clients().get("github").headers()).isEmpty();
 
         McpConfiguration.Tools tools = client.tools();
         assertThat(tools.mode()).isEqualTo(McpConfiguration.ToolMode.INCLUDE);
@@ -53,5 +61,23 @@ class McpConfigurationTest {
     @Test
     void mcpClientsExcludesDisabledClients() {
         assertThat(mcpClients).isEmpty();
+    }
+
+    @Test
+    void mapsHeaderNamesFromEnvironmentVariableValues() {
+        AgentConfiguration configuration = buildConfigurationWithEnvironment(
+                Map.of("agent.mcp.clients.remote.url", "https://mcp.example.test/mcp"),
+                Map.of(
+                        "AGENT_MCP_CLIENTS_REMOTE_HEADERS_0__NAME",
+                        "X-API-Key",
+                        "AGENT_MCP_CLIENTS_REMOTE_HEADERS_0__VALUE",
+                        "environment-secret"));
+
+        assertThat(configuration.mcp().clients().get("remote").headers())
+                .singleElement()
+                .satisfies(header -> {
+                    assertThat(header.name()).isEqualTo("X-API-Key");
+                    assertThat(header.value()).isEqualTo("environment-secret");
+                });
     }
 }

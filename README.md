@@ -123,7 +123,8 @@ agent.mcp.clients."github".transport=streamable-http
 agent.mcp.clients."github".url=https://mcp.example.com/github/mcp
 agent.mcp.clients."github".auth.type=oauth2
 agent.mcp.clients."github".auth.oidc-client=github-oauth
-agent.mcp.clients."github".headers.x-client-name=lh-agent
+agent.mcp.clients."github".headers[0].name=X-Client-Name
+agent.mcp.clients."github".headers[0].value=lh-agent
 agent.mcp.clients."github".timeout=PT30S
 agent.mcp.clients."github".initialization-timeout=PT30S
 agent.mcp.clients."github".tool-execution-timeout=PT60S
@@ -134,6 +135,21 @@ agent.mcp.clients."notifications".auth.token=${NOTIFICATIONS_MCP_TOKEN}
 agent.mcp.clients."public".url=https://mcp.example.com/public/mcp
 agent.mcp.clients."public".auth.type=none
 ```
+
+Custom headers use indexed name/value entries so punctuation in a header name is preserved when
+configuration comes from environment variables. For example:
+
+```shell
+export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__NAME=X-API-Key
+export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__VALUE=secret
+```
+
+The previous `headers.<header-name>=<value>` syntax is not supported. Exact duplicate names are
+processed in index order and the last value wins. For environment-only configuration, use MCP
+client names containing only lowercase ASCII letters and digits. Other client names remain
+supported when their exact names are declared in a properties file. SSE request logging includes
+headers, so enabling `log-requests` can expose configured header values and authentication
+credentials.
 
 MCP configuration is validated during Quarkus startup. Every configured client requires a nonblank,
 supported URL. Authentication type is `none` by default; `bearer` requires only `auth.token`, and
