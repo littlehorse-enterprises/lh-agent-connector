@@ -144,7 +144,7 @@ export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__NAME=X-API-Key
 export AGENT_MCP_CLIENTS_GITHUB_HEADERS_0__VALUE=secret
 ```
 
-The previous `headers.<header-name>=<value>` syntax is not supported. Exact duplicate names are
+Exact duplicate names are
 processed in index order and the last value wins. For environment-only configuration, use MCP
 client names containing only lowercase ASCII letters and digits. Other client names remain
 supported when their exact names are declared in a properties file. SSE request logging includes
