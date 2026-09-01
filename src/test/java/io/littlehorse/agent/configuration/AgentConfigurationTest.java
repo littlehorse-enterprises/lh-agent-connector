@@ -14,6 +14,30 @@ import java.util.Map;
 class AgentConfigurationTest {
 
     @Test
+    void defaultsMaxToolRoundsToTen() {
+        assertThat(buildConfiguration(Map.of()).maxToolRounds()).isEqualTo(10);
+    }
+
+    @Test
+    void mapsConfiguredMaxToolRounds() {
+        assertThat(buildConfiguration(Map.of("agent.max-tool-rounds", "25")).maxToolRounds())
+                .isEqualTo(25);
+    }
+
+    @Test
+    void rejectsNonPositiveMaxToolRounds() {
+        assertThatThrownBy(() -> buildConfiguration(Map.of("agent.max-tool-rounds", "0")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining("agent.max-tool-rounds")
+                .hasMessageContaining("must be greater than zero");
+
+        assertThatThrownBy(() -> buildConfiguration(Map.of("agent.max-tool-rounds", "-1")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining("agent.max-tool-rounds")
+                .hasMessageContaining("must be greater than zero");
+    }
+
+    @Test
     void mapsTheCompleteAgentConfigurationTree() {
         AgentConfiguration configuration = buildConfiguration(Map.of(
                 "agent.system-message", "You are helpful.",

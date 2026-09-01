@@ -13,7 +13,8 @@ import io.quarkiverse.langchain4j.mcp.runtime.http.QuarkusHttpMcpTransport;
 
 import jakarta.enterprise.context.ApplicationScoped;
 
-import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Supplier;
@@ -93,9 +94,10 @@ public class McpClientFactory {
     }
 
     private McpHeadersSupplier headerSupplier(
-            Map<String, String> headers, Optional<Supplier<String>> authSupplier) {
+            List<McpConfiguration.Header> headers, Optional<Supplier<String>> authSupplier) {
         return _ -> {
-            Map<String, String> suppliedHeaders = new HashMap<>(Map.copyOf(headers));
+            Map<String, String> suppliedHeaders = new LinkedHashMap<>();
+            headers.forEach(header -> suppliedHeaders.put(header.name(), header.value()));
             authSupplier.ifPresent(
                     supplier -> suppliedHeaders.put("Authorization", "Bearer " + supplier.get()));
             return suppliedHeaders;

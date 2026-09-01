@@ -177,6 +177,7 @@ class AgentExecutorTest {
                 .build();
         AgentExecutor executor = new AgentExecutor(
                 model,
+                mockAgentConfiguration(10),
                 Optional.empty(),
                 emptyToolsManager(),
                 unavailableStructDefResolver(),
@@ -202,6 +203,7 @@ class AgentExecutorTest {
         Instance<UserMessageTemplateRenderer> renderer = mock(Instance.class);
         AgentExecutor executor = new AgentExecutor(
                 model,
+                mockAgentConfiguration(10),
                 Optional.empty(),
                 emptyToolsManager(),
                 unavailableStructDefResolver(),
@@ -294,6 +296,41 @@ class AgentExecutorTest {
     }
 
     @Test
+    void stopsAfterTheConfiguredMaximumToolRounds() {
+        String toolName = "remote_search";
+        ToolSpecification specification = ToolSpecification.builder()
+                .name(toolName)
+                .parameters(JsonObjectSchema.builder().build())
+                .build();
+        AtomicInteger toolExecutionCount = new AtomicInteger();
+        McpClient mcpClient = mcpClient("remote", List.of(specification), ignored -> {
+            toolExecutionCount.incrementAndGet();
+            return ToolExecutionResult.builder().resultText("result").build();
+        });
+        ToolsManager toolsManager =
+                new ToolsManager(McpToolProvider.builder().mcpClients(mcpClient).build());
+        AtomicInteger chatCount = new AtomicInteger();
+        ChatModel model = mock(ChatModel.class);
+        when(model.chat(any(ChatRequest.class))).thenAnswer(ignored -> ChatResponse.builder()
+                .aiMessage(AiMessage.from(ToolExecutionRequest.builder()
+                        .id("tool-call-" + chatCount.incrementAndGet())
+                        .name(toolName)
+                        .arguments("{}")
+                        .build()))
+                .build());
+        TestWorkerContext context = new TestWorkerContext();
+
+        assertThatThrownBy(() -> agentExecutor(model, Optional.empty(), toolsManager, 2)
+                        .textToText("Search", context))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("The model exceeded the limit of 2 tool rounds");
+
+        assertThat(chatCount).hasValue(2);
+        assertThat(toolExecutionCount).hasValue(2);
+        assertThat(context.checkpointCount).isEqualTo(5);
+    }
+
+    @Test
     void restoresEveryChatAndToolOutputWithoutRepeatingWork() {
         ToolExecutionRequest toolRequest = checkpointedToolRequest();
         TestWorkerContext context = new TestWorkerContext(
@@ -361,6 +398,7 @@ class AgentExecutorTest {
                 .build();
         AgentExecutor executor = new AgentExecutor(
                 model,
+                mockAgentConfiguration(10),
                 Optional.empty(),
                 emptyToolsManager(),
                 structDefResolver(structDef),
@@ -416,12 +454,27 @@ class AgentExecutorTest {
 
     private static AgentExecutor agentExecutor(
             ChatModel model, Optional<SystemMessage> systemMessage, ToolsManager toolsManager) {
+        return agentExecutor(model, systemMessage, toolsManager, 10);
+    }
+
+    private static AgentExecutor agentExecutor(
+            ChatModel model,
+            Optional<SystemMessage> systemMessage,
+            ToolsManager toolsManager,
+            int maxToolRounds) {
         return new AgentExecutor(
                 model,
+                mockAgentConfiguration(maxToolRounds),
                 systemMessage,
                 toolsManager,
                 unavailableStructDefResolver(),
                 userMessageTemplateRenderer("{{struct}}"));
+    }
+
+    private static AgentConfiguration mockAgentConfiguration(int maxToolRounds) {
+        AgentConfiguration agentConfiguration = mock(AgentConfiguration.class);
+        when(agentConfiguration.maxToolRounds()).thenReturn(maxToolRounds);
+        return agentConfiguration;
     }
 
     @SuppressWarnings("unchecked")

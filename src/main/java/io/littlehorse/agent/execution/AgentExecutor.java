@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.service.tool.ToolExecutionResult;
 import dev.langchain4j.service.tool.ToolExecutor;
 
+import io.littlehorse.agent.configuration.AgentConfiguration;
 import io.littlehorse.agent.mcp.ToolsManager;
 import io.littlehorse.agent.message.UserMessageTemplateRenderer;
 import io.littlehorse.agent.structuredoutput.StructDefResolver;
@@ -40,9 +41,8 @@ public class AgentExecutor {
 
     private static final Logger LOG = LoggerFactory.getLogger(AgentExecutor.class);
 
-    private static final int MAX_CHAT_ROUNDS = 10;
-
     private final ChatModel chatModel;
+    private final int maxToolRounds;
     private final Optional<SystemMessage> systemMessage;
     private final ToolsManager toolsManager;
     private final Instance<StructDefResolver> structDefResolver;
@@ -50,11 +50,13 @@ public class AgentExecutor {
 
     public AgentExecutor(
             ChatModel chatModel,
+            AgentConfiguration agentConfiguration,
             Optional<SystemMessage> systemMessage,
             ToolsManager toolsManager,
             Instance<StructDefResolver> structDefResolver,
             Instance<UserMessageTemplateRenderer> userMessageTemplateRenderer) {
         this.chatModel = Objects.requireNonNull(chatModel);
+        this.maxToolRounds = Objects.requireNonNull(agentConfiguration).maxToolRounds();
         this.systemMessage = Objects.requireNonNull(systemMessage);
         this.toolsManager = Objects.requireNonNull(toolsManager);
         this.structDefResolver = Objects.requireNonNull(structDefResolver);
@@ -95,7 +97,7 @@ public class AgentExecutor {
         systemMessage.ifPresent(systemMessage -> messages.addSystemMessage(() -> systemMessage));
         messages.addUserMessage(userMessage);
 
-        for (int round = 0; round < MAX_CHAT_ROUNDS; round++) {
+        for (int toolRound = 0; toolRound < maxToolRounds; toolRound++) {
             AiMessage aiMessage = messages.addChatResponse(() -> chat(messages.snapshot(), format));
 
             if (!aiMessage.hasToolExecutionRequests()) {
@@ -108,7 +110,7 @@ public class AgentExecutor {
         }
 
         throw new IllegalStateException(
-                "The model exceeded the limit of " + MAX_CHAT_ROUNDS + " chat rounds");
+                "The model exceeded the limit of " + maxToolRounds + " tool rounds");
     }
 
     private UserMessage renderedUserMessage(InlineStruct input) {

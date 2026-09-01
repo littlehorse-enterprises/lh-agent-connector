@@ -35,7 +35,7 @@ public interface McpConfiguration {
                 message = "must be an HTTP(S) or WS(S) URL")
         String url();
 
-        Map<@NotBlank String, @NotBlank String> headers();
+        List<Header> headers();
 
         Authentication auth();
 
@@ -44,7 +44,8 @@ public interface McpConfiguration {
                         "the Authorization header cannot be configured when auth.type is BEARER or OAUTH2")
         default boolean isAuthorizationHeaderValid() {
             return auth().type().equals(AuthenticationType.NONE)
-                    || headers().keySet().stream()
+                    || headers().stream()
+                            .map(Header::name)
                             .noneMatch(header -> header.equalsIgnoreCase("Authorization"));
         }
 
@@ -73,6 +74,15 @@ public interface McpConfiguration {
         boolean subsidiaryChannel();
 
         Tools tools();
+    }
+
+    interface Header {
+
+        @NotBlank
+        String name();
+
+        @NotBlank
+        String value();
     }
 
     interface Authentication {

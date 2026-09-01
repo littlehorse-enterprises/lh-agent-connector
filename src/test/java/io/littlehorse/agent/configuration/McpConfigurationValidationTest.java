@@ -62,6 +62,40 @@ class McpConfigurationValidationTest {
     }
 
     @Test
+    void rejectsBlankHeaderNamesAndValues() {
+        assertThatThrownBy(() -> buildConfiguration(Map.of(
+                        "agent.mcp.clients.remote.url",
+                        "https://mcp.example.test/mcp",
+                        "agent.mcp.clients.remote.headers[0].name",
+                        "   ",
+                        "agent.mcp.clients.remote.headers[0].value",
+                        "value")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining("must not be blank");
+
+        assertThatThrownBy(() -> buildConfiguration(Map.of(
+                        "agent.mcp.clients.remote.url",
+                        "https://mcp.example.test/mcp",
+                        "agent.mcp.clients.remote.headers[0].name",
+                        "X-Test",
+                        "agent.mcp.clients.remote.headers[0].value",
+                        "   ")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining("must not be blank");
+    }
+
+    @Test
+    void rejectsTheLegacyHeaderMapSyntax() {
+        assertThatThrownBy(() -> buildConfiguration(Map.of(
+                        "agent.mcp.clients.remote.url",
+                        "https://mcp.example.test/mcp",
+                        "agent.mcp.clients.remote.headers.x-test",
+                        "value")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining("agent.mcp.clients.remote.headers.x-test");
+    }
+
+    @Test
     void rejectsNamesWhenToolModeIsAll() {
         assertThatThrownBy(() -> buildConfiguration(Map.of(
                         "agent.mcp.clients.remote.url",
@@ -237,7 +271,24 @@ class McpConfigurationValidationTest {
                         "bearer",
                         "agent.mcp.clients.remote.auth.token",
                         "direct-token",
-                        "agent.mcp.clients.remote.headers.authorization",
+                        "agent.mcp.clients.remote.headers[0].name",
+                        "authorization",
+                        "agent.mcp.clients.remote.headers[0].value",
+                        "Bearer another-token")))
+                .isInstanceOf(ConfigValidationException.class)
+                .hasMessageContaining(
+                        "Authorization header cannot be configured when auth.type is BEARER or OAUTH2");
+
+        assertThatThrownBy(() -> buildConfiguration(Map.of(
+                        "agent.mcp.clients.remote.url",
+                        "https://mcp.example.test/mcp",
+                        "agent.mcp.clients.remote.auth.type",
+                        "oauth2",
+                        "agent.mcp.clients.remote.auth.oidc-client",
+                        "test-oauth",
+                        "agent.mcp.clients.remote.headers[0].name",
+                        "AUTHORIZATION",
+                        "agent.mcp.clients.remote.headers[0].value",
                         "Bearer another-token")))
                 .isInstanceOf(ConfigValidationException.class)
                 .hasMessageContaining(
