@@ -9,6 +9,7 @@ import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 
 import io.littlehorse.sdk.common.LHLibUtil;
+import io.littlehorse.sdk.common.proto.TypeDefinition;
 import io.littlehorse.sdk.common.proto.VariableValue;
 import io.littlehorse.sdk.wfsdk.internal.structdefutil.LHStructDefType;
 
@@ -77,6 +78,16 @@ class ToolExecutionResultMessageStructTest {
                         .getValue()
                         .getValueCase())
                 .isEqualTo(VariableValue.ValueCase.ARRAY);
+        assertThat(serialized
+                        .getStruct()
+                        .getStruct()
+                        .getFieldsOrThrow("contents")
+                        .getValue()
+                        .getArray()
+                        .getItems(0)
+                        .getStruct()
+                        .hasStructDefId())
+                .isFalse();
         assertThat(restored.toChatMessage()).isEqualTo(original);
     }
 
@@ -95,9 +106,8 @@ class ToolExecutionResultMessageStructTest {
                         .getFieldType()
                         .getInlineArrayDef()
                         .getArrayType()
-                        .getStructDefId()
-                        .getName())
-                .isEqualTo("text-content");
+                        .getDefinedTypeCase())
+                .isEqualTo(TypeDefinition.DefinedTypeCase.INLINE_STRUCT_DEF);
     }
 
     private static ToolExecutionResultMessage messageWithEveryField() {
