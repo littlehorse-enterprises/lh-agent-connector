@@ -118,36 +118,36 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
-  if ! command -v brew >/dev/null 2>&1; then
-    echo "'brew' command not found. Cannot start the installed Ollama service." >&2
-    exit 1
-  fi
-
-  echo "Starting Ollama with Homebrew."
-  brew services start ollama
-
-  for _ in {1..30}; do
-    if curl --fail --silent --max-time 2 http://localhost:11434/api/tags >/dev/null; then
-      break
-    fi
-    sleep 1
-  done
-
-  if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
-    echo "Ollama did not become ready at http://localhost:11434." >&2
-    exit 1
-  fi
-fi
+#if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
+#  if ! command -v brew >/dev/null 2>&1; then
+#    echo "'brew' command not found. Cannot start the installed Ollama service." >&2
+#    exit 1
+#  fi
+#
+#  echo "Starting Ollama with Homebrew."
+#  brew services start ollama
+#
+#  for _ in {1..30}; do
+#    if curl --fail --silent --max-time 2 http://localhost:11434/api/tags >/dev/null; then
+#      break
+#    fi
+#    sleep 1
+#  done
+#
+#  if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
+#    echo "Ollama did not become ready at http://localhost:11434." >&2
+#    exit 1
+#  fi
+#fi
 
 run_compose up --detach --wait --wait-timeout 300
 
-if ! ollama show "${OLLAMA_MODEL}" >/dev/null 2>&1; then
-  echo "Downloading local Ollama model ${OLLAMA_MODEL}."
-  ollama pull "${OLLAMA_MODEL}"
-fi
-
-ollama show "${OLLAMA_MODEL}" >/dev/null
+#if ! ollama show "${OLLAMA_MODEL}" >/dev/null 2>&1; then
+#  echo "Downloading local Ollama model ${OLLAMA_MODEL}."
+#  ollama pull "${OLLAMA_MODEL}"
+#fi
+#
+#ollama show "${OLLAMA_MODEL}" >/dev/null
 
 echo "LittleHorse is ready at localhost:2023."
 echo "Dashboard: http://localhost:8080"

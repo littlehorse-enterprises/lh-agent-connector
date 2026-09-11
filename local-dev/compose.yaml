@@ -1,6 +1,6 @@
 services:
   littlehorse:
-    image: "ghcr.io/littlehorse-enterprises/littlehorse/lh-standalone:${LH_VERSION:?LH_VERSION must be set from gradle.properties}"
+    image: "littlehorse/lh-standalone:latest"
     restart: on-failure
     environment:
       LHS_LISTENERS: EXTERNAL:2023,INTERNAL:2024
