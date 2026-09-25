@@ -19,6 +19,8 @@ import io.littlehorse.sdk.common.proto.StructFieldDef;
 import io.littlehorse.sdk.common.proto.TypeDefinition;
 import io.littlehorse.sdk.common.proto.VariableType;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,7 +34,7 @@ final class JsonSchemaTransformer {
         Objects.requireNonNull(structDef, "struct definition must not be null");
         Objects.requireNonNull(definitionsById, "StructDef definitions must not be null");
 
-        JsonObjectSchema rootElement = toJsonObjectSchema(structDef, definitionsById);
+        JsonObjectSchema.Builder rootElement = toJsonObjectSchema(structDef, definitionsById);
         Set<StructDefId> referencedIds = definitionsById.values().stream()
                 .flatMap(definition -> referencedStructDefIds(definition.getStructDef()).stream())
                 .collect(Collectors.toSet());
@@ -40,27 +42,31 @@ final class JsonSchemaTransformer {
             Map<String, JsonSchemaElement> definitions = new LinkedHashMap<>();
             referencedIds.forEach(id -> definitions.put(
                     referenceName(id),
-                    toJsonObjectSchema(requireDefinition(id, definitionsById), definitionsById)));
-            rootElement = rootElement.toBuilder().definitions(definitions).build();
+                    toJsonObjectSchema(requireDefinition(id, definitionsById), definitionsById)
+                            .build()));
+            rootElement = rootElement.definitions(definitions);
         }
 
         return JsonSchema.builder()
                 .name(structDef.getId().getName())
-                .rootElement(rootElement)
+                .rootElement(rootElement.build())
                 .build();
     }
 
-    private static JsonObjectSchema toJsonObjectSchema(
+    private static JsonObjectSchema.Builder toJsonObjectSchema(
             StructDef structDef, Map<StructDefId, StructDef> definitionsById) {
-        JsonObjectSchema schema = toJsonObjectSchema(structDef.getStructDef(), definitionsById);
+        JsonObjectSchema.Builder schema =
+                toJsonObjectSchema(structDef.getStructDef(), definitionsById, null);
         if (!structDef.hasDescription()) {
             return schema;
         }
-        return schema.toBuilder().description(structDef.getDescription()).build();
+        return schema.description(structDef.getDescription());
     }
 
-    private static JsonObjectSchema toJsonObjectSchema(
-            InlineStructDef structDef, Map<StructDefId, StructDef> definitionsById) {
+    private static JsonObjectSchema.Builder toJsonObjectSchema(
+            InlineStructDef structDef,
+            Map<StructDefId, StructDef> definitionsById,
+            String description) {
         JsonObjectSchema.Builder schema = JsonObjectSchema.builder().additionalProperties(false);
         List<String> required = new ArrayList<>();
 
@@ -71,52 +77,88 @@ final class JsonSchemaTransformer {
             }
         });
 
-        return schema.required(required).build();
+        return schema.description(description).required(required);
     }
 
     private static JsonSchemaElement toJsonSchemaElement(
             StructFieldDef fieldDef, Map<StructDefId, StructDef> definitionsById) {
-        JsonSchemaElement fieldSchema =
-                toJsonSchemaElement(fieldDef.getFieldType(), definitionsById);
-        if (!fieldDef.getIsNullable()) {
-            return fieldSchema;
+        String description = getDescription(fieldDef);
+        JsonSchemaElement fieldSchema = toJsonSchemaElement(
+                fieldDef.getFieldType(),
+                definitionsById,
+                fieldDef.getIsNullable() ? null : description);
+        if (fieldDef.getIsNullable()) {
+            return JsonAnyOfSchema.builder()
+                    .description(description)
+                    .anyOf(fieldSchema, new JsonNullSchema())
+                    .build();
         }
+        return fieldSchema;
+    }
 
-        return JsonAnyOfSchema.builder()
-                .anyOf(fieldSchema, new JsonNullSchema())
-                .build();
+    private static @Nullable String getDescription(StructFieldDef fieldDef) {
+        return fieldDef.hasDescription() && !fieldDef.getDescription().isBlank()
+                ? fieldDef.getDescription()
+                : null;
     }
 
     private static JsonSchemaElement toJsonSchemaElement(
             TypeDefinition typeDefinition, Map<StructDefId, StructDef> definitionsById) {
+        return toJsonSchemaElement(typeDefinition, definitionsById, null);
+    }
+
+    private static JsonSchemaElement toJsonSchemaElement(
+            TypeDefinition typeDefinition,
+            Map<StructDefId, StructDef> definitionsById,
+            String description) {
         return switch (typeDefinition.getDefinedTypeCase()) {
-            case PRIMITIVE_TYPE -> toJsonSchemaElement(typeDefinition.getPrimitiveType());
+            case PRIMITIVE_TYPE ->
+                toJsonSchemaElement(typeDefinition.getPrimitiveType(), description);
             case INLINE_ARRAY_DEF ->
                 JsonArraySchema.builder()
+                        .description(description)
                         .items(toJsonSchemaElement(
                                 typeDefinition.getInlineArrayDef().getArrayType(), definitionsById))
                         .build();
             case INLINE_STRUCT_DEF ->
-                toJsonObjectSchema(typeDefinition.getInlineStructDef(), definitionsById);
+                toJsonObjectSchema(
+                                typeDefinition.getInlineStructDef(), definitionsById, description)
+                        .build();
             case INLINE_MAP_DEF ->
                 JsonObjectSchema.builder()
+                        .description(description)
                         .required(List.of())
                         .additionalProperties(true)
                         .build();
-            case STRUCT_DEF_ID -> toJsonReference(typeDefinition.getStructDefId(), definitionsById);
-            case DEFINEDTYPE_NOT_SET -> toJsonSchemaElement(VariableType.JSON_OBJ);
+            case STRUCT_DEF_ID ->
+                toJsonReference(typeDefinition.getStructDefId(), definitionsById, description);
+            case DEFINEDTYPE_NOT_SET -> toJsonSchemaElement(VariableType.JSON_OBJ, description);
         };
     }
 
     private static JsonSchemaElement toJsonReference(
-            StructDefId id, Map<StructDefId, StructDef> definitionsById) {
+            StructDefId id, Map<StructDefId, StructDef> definitionsById, String description) {
         if (definitionsById == null) {
             throw new IllegalArgumentException(
                     "Cannot transform referenced StructDef '%s' without its definition"
                             .formatted(id.getName()));
         }
+
         requireDefinition(id, definitionsById);
-        return JsonReferenceSchema.builder().reference(referenceName(id)).build();
+
+        JsonReferenceSchema reference =
+                JsonReferenceSchema.builder().reference(referenceName(id)).build();
+
+        if (description == null) {
+            return reference;
+        }
+
+        // References cannot carry a description; keep field metadata outside the shared
+        // definition.
+        return JsonAnyOfSchema.builder()
+                .description(description)
+                .anyOf(reference)
+                .build();
     }
 
     private static StructDef requireDefinition(
@@ -156,18 +198,20 @@ final class JsonSchemaTransformer {
         return "%s_v%d".formatted(id.getName(), id.getVersion());
     }
 
-    private static JsonSchemaElement toJsonSchemaElement(VariableType type) {
+    private static JsonSchemaElement toJsonSchemaElement(VariableType type, String description) {
         return switch (type) {
-            case DOUBLE -> new JsonNumberSchema();
-            case BOOL -> new JsonBooleanSchema();
-            case INT -> new JsonIntegerSchema();
-            case STR, BYTES, WF_RUN_ID, TIMESTAMP -> new JsonStringSchema();
+            case DOUBLE -> JsonNumberSchema.builder().description(description).build();
+            case BOOL -> JsonBooleanSchema.builder().description(description).build();
+            case INT -> JsonIntegerSchema.builder().description(description).build();
+            case STR, BYTES, WF_RUN_ID, TIMESTAMP ->
+                JsonStringSchema.builder().description(description).build();
             case JSON_OBJ ->
                 JsonObjectSchema.builder()
+                        .description(description)
                         .required(List.of())
                         .additionalProperties(true)
                         .build();
-            case JSON_ARR -> JsonArraySchema.builder().build();
+            case JSON_ARR -> JsonArraySchema.builder().description(description).build();
             case UNRECOGNIZED ->
                 throw new IllegalArgumentException(
                         "Cannot transform unrecognized LittleHorse type");
