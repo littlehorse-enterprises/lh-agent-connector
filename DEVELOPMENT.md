@@ -20,9 +20,10 @@ Install Ollama before running the local setup:
 brew install ollama
 ```
 
-`local-dev/setup.sh` validates the `ollama` command and the API at `localhost:11434`. If Ollama is
-installed but stopped, setup starts it with `brew services start ollama` and waits up to 30 seconds
-for its API. Setup never installs Ollama.
+`local-dev/setup.sh` validates the `ollama` command and the API at `127.0.0.1:11434`. If Ollama is
+installed but stopped, setup starts it with `brew services start ollama` and waits for its API. On
+macOS, if Homebrew loads the service without running it, setup asks launchd to start it directly.
+Setup never installs Ollama.
 
 The Compose environment binds the LittleHorse API and dashboard to the loopback interface, so it
 does not change Kubernetes contexts or expose the services on other network interfaces.

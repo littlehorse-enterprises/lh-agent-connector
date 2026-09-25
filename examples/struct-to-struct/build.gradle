@@ -1,0 +1,39 @@
+plugins {
+    id "com.diffplug.spotless"
+    id "io.quarkus"
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+repositories {
+    mavenCentral()
+    maven {
+        name = "Central Portal Snapshots"
+        url = uri("https://central.sonatype.com/repository/maven-snapshots/")
+        content {
+            includeGroup("io.littlehorse")
+        }
+    }
+}
+
+spotless {
+    java {
+        removeUnusedImports()
+        palantirJavaFormat().style("AOSP")
+    }
+}
+
+dependencies {
+    implementation project(":")
+
+    implementation enforcedPlatform("io.quarkus.platform:quarkus-bom:${quarkusVersion}")
+    implementation "io.quarkus:quarkus-arc"
+    implementation "io.littlehorse:littlehorse-quarkus:${version}", { changing = true }
+}
+
+compileJava {
+    options.compilerArgs << "-parameters"
+}

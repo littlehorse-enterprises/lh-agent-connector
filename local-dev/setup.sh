@@ -78,6 +78,10 @@ run_compose() {
     "$@"
 }
 
+ollama_ready() {
+  curl --fail --silent --max-time 2 http://127.0.0.1:11434/api/tags >/dev/null
+}
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "'docker' command not found. Install https://docs.docker.com/engine/install/." >&2
   exit 1
@@ -118,7 +122,7 @@ if ! docker info >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
+if ! ollama_ready; then
   if ! command -v brew >/dev/null 2>&1; then
     echo "'brew' command not found. Cannot start the installed Ollama service." >&2
     exit 1
@@ -127,15 +131,26 @@ if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/nul
   echo "Starting Ollama with Homebrew."
   brew services start ollama
 
-  for _ in {1..30}; do
-    if curl --fail --silent --max-time 2 http://localhost:11434/api/tags >/dev/null; then
+  for attempt in {1..30}; do
+    if ollama_ready; then
       break
     fi
+
+    if [[ "${attempt}" -eq 3 ]] && command -v launchctl >/dev/null 2>&1 && command -v plutil >/dev/null 2>&1; then
+      service_name=$(brew services info --json ollama | plutil -extract 0.service_name raw - 2>/dev/null) || service_name=""
+      if [[ -n "${service_name}" ]]; then
+        echo "Ollama is still unavailable; asking launchd to start ${service_name}."
+        launchctl kickstart "gui/$(id -u)/${service_name}" || true
+      fi
+    fi
+
     sleep 1
   done
 
-  if ! curl --fail --silent --max-time 5 http://localhost:11434/api/tags >/dev/null; then
-    echo "Ollama did not become ready at http://localhost:11434." >&2
+  if ! ollama_ready; then
+    echo "Ollama did not become ready at http://127.0.0.1:11434." >&2
+    brew services info ollama >&2 || true
+    curl --fail --silent --show-error --max-time 5 http://127.0.0.1:11434/api/tags >/dev/null || true
     exit 1
   fi
 fi
