@@ -9,7 +9,7 @@ input/output combination.
 | [text-to-text](text-to-text/README.md) | Text | Text | Available |
 | `text-to-struct` | Text | Struct | Planned |
 | `struct-to-text` | Struct | Text | Planned |
-| `struct-to-struct` | Struct | Struct | Planned |
+| [struct-to-struct](struct-to-struct/README.md) | Struct | Struct | Available |
 
 The examples use the LittleHorse and Ollama environment described in
 [DEVELOPMENT.md](../DEVELOPMENT.md).
