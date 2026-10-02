@@ -211,6 +211,11 @@ catalog. The next checkpointed chat or tool execution reloads the complete catal
 continuing. If any enabled server is unavailable during a load or reload, that agent invocation
 fails rather than proceeding with an incomplete set of tools.
 
+Tool results support text blocks and embedded resources containing `resource.text`. Embedded text
+resources are rendered with their URI and optional MIME type before their contents, in the original
+block order. The MCP error flag is preserved. Binary resources and other non-text blocks are rejected
+with an explicit error rather than silently omitted from the agent's context.
+
 ## Run
 
 Export the selected model's credentials, then run the application in Quarkus development mode:

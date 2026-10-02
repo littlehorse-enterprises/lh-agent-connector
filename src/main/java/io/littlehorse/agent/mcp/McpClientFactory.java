@@ -43,6 +43,7 @@ public class McpClientFactory {
                 .cacheToolList(true)
                 .initializationTimeout(configuration.initializationTimeout())
                 .toolExecutionTimeout(configuration.toolExecutionTimeout())
+                .toolResultExtractor(new TextResourceToolResultExtractor())
                 .addListener(toolsListChangedListener)
                 .build();
     }
