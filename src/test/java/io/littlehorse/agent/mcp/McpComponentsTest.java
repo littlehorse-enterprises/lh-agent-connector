@@ -187,6 +187,46 @@ class McpComponentsTest {
     }
 
     @Test
+    void mcpClientNormalizesEmbeddedTextResourcesBeforeReturningToolResults() throws IOException {
+        HttpServer server = mcpServer(
+                new AtomicReference<>(), new AtomicReference<>(), new AtomicReference<>(), """
+                {"content":[{"type":"text","text":"File contents:"},{"type":"resource","resource":{"uri":"repo://owner/repo/file.py","mimeType":"text/x-python","text":"raise ValueError()"}}],"isError":false}
+                """);
+        String url = "http://localhost:" + server.getAddress().getPort() + "/mcp";
+        McpConfiguration configuration = new TestMcpConfiguration(
+                Map.of("github", new TestClientConfiguration(true, url, allTools())));
+        Map<String, DefaultMcpClient> clients = Map.of();
+        try {
+            clients = mcpClientsProducer()
+                    .mcpClients(
+                            agentConfiguration(configuration),
+                            Map.of("github", () -> "test-token"),
+                            mock(McpClientListener.class));
+            var provider = new McpToolProviderProducer(new McpToolPolicy())
+                    .mcpToolProvider(agentConfiguration(configuration), clients);
+            var toolsManager = new ToolsManager(provider);
+            var result = toolsManager
+                    .getToolExecutor("github_lookup")
+                    .orElseThrow()
+                    .executeWithContext(
+                            ToolExecutionRequest.builder()
+                                    .id("call-resource")
+                                    .name("github_lookup")
+                                    .arguments("{}")
+                                    .build(),
+                            InvocationContext.builder().build());
+
+            assertThat(result.resultText())
+                    .isEqualTo(
+                            "File contents:\nResource: repo://owner/repo/file.py (text/x-python)\nraise ValueError()");
+            assertThat(result.isError()).isFalse();
+        } finally {
+            clients.values().forEach(DefaultMcpClient::close);
+            server.stop(0);
+        }
+    }
+
+    @Test
     void mcpClientsRejectsAnEnabledClientWithoutAnAuthenticationSupplier() {
         McpConfiguration configuration = new TestMcpConfiguration(Map.of(
                 "missing-auth",
@@ -259,11 +299,24 @@ class McpComponentsTest {
             AtomicReference<String> configuredHeader,
             AtomicReference<String> executedTool)
             throws IOException {
+        return mcpServer(
+                authorization,
+                configuredHeader,
+                executedTool,
+                "{\"content\":[{\"type\":\"text\",\"text\":\"MCP result\"}],\"isError\":false}");
+    }
+
+    private static HttpServer mcpServer(
+            AtomicReference<String> authorization,
+            AtomicReference<String> configuredHeader,
+            AtomicReference<String> executedTool,
+            String toolResult)
+            throws IOException {
         HttpServer server = HttpServer.create(new InetSocketAddress("localhost", 0), 0);
         server.createContext(
                 "/mcp",
                 exchange -> respondToMcpRequest(
-                        exchange, authorization, configuredHeader, executedTool));
+                        exchange, authorization, configuredHeader, executedTool, toolResult));
         server.start();
         return server;
     }
@@ -272,7 +325,8 @@ class McpComponentsTest {
             HttpExchange exchange,
             AtomicReference<String> authorization,
             AtomicReference<String> configuredHeader,
-            AtomicReference<String> executedTool)
+            AtomicReference<String> executedTool,
+            String toolResult)
             throws IOException {
         authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
         configuredHeader.set(exchange.getRequestHeaders().getFirst("X-Test"));
@@ -290,8 +344,8 @@ class McpComponentsTest {
         } else if (request.contains("\"method\":\"tools/call\"")) {
             executedTool.set(request.contains("\"name\":\"lookup\"") ? "lookup" : "delete");
             response = """
-                    {"jsonrpc":"2.0","id":%s,"result":{"content":[{"type":"text","text":"MCP result"}],"isError":false}}
-                    """.formatted(id);
+                    {"jsonrpc":"2.0","id":%s,"result":%s}
+                    """.formatted(id, toolResult);
         } else {
             response = "{}";
         }
